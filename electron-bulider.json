@@ -1,0 +1,13 @@
+{
+  "appId": "com.aleksan.audio-switcher",
+  "files": ["dist", "dist-react"],
+  "Linux": {
+    "target": ["AppImage"],
+    "icon": "build/icon.png",
+    "category": "Utility"
+  },
+  "win": {
+    "target": ["portable", "msi"],
+    "icon": "build/icon.ico"
+  }
+}
