@@ -13,6 +13,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/os-utils": "^0.0.4",
+    "os-utils": "^0.0.14",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
