@@ -1,31 +1,45 @@
-import { useState } from 'react'
-import reactLogo from '../assets/react.svg'
-import './App.css'
+import React, { useState, useEffect } from 'react';
+import ConnectModal from './ConnectModal';
+import ClientList from './ClientList';
+import './styles.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [clients, setClients] = useState([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [ws, setWs] = useState(null);
+  const [showModal, setShowModal] = useState(!localStorage.getItem('serverUrl'));
+
+  const connectToServer = (url) => {
+    const socket = new WebSocket(url || localStorage.getItem('serverUrl'));
+    setWs(socket);
+
+    socket.onopen = () => {
+      setIsConnected(true);
+      setShowModal(false);
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'client_list') setClients(data.clients);
+    };
+
+    socket.onclose = () => setIsConnected(false);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>HELLO! Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="app">
+      {showModal ? (
+        <ConnectModal onConnect={connectToServer} />
+      ) : (
+        <ClientList
+          clients={clients}
+          ws={ws}
+          onRename={(id, name) => ws.send(JSON.stringify({ type: 'rename', id, name }))}
+          onToggleMute={(id, isMuted) => ws.send(JSON.stringify({ type: 'mute', target: id, isMuted }))}
+        />
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;
