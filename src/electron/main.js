@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { isDev } from './util.js';
+import { getPreloadPath } from './pathResolver.js';
+import { exec } from 'child_process';
 // // import { pollResources } from './resourceManager.js';
 
 // app.on('ready', () => {
@@ -22,7 +24,7 @@ app.on('ready', () => {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(app.getAppPath(), 'preload.js'),
+      preload: getPreloadPath(),
       contextIsolation: true,
       sandbox: true
     }
@@ -40,10 +42,8 @@ ipcMain.handle('toggle-mute', (_, isMuted) => {
   const platform = process.platform;
   try {
     if (platform === 'win32') {
-      const { exec } = require('child_process');
       exec(`nircmd.exe setsysvolume ${isMuted ? 0 : 65535} "Microphone"`);
     } else if (platform === 'linux') {
-      const { exec } = require('child_process');
       exec(`pactl set-source-mute @DEFAULT_SOURCE@ ${isMuted ? 1 : 0}`);
     }
     return { success: true };
