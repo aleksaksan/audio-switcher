@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
 import { NavLink, Outlet } from 'react-router';
+import { StatusIcon } from './StatusIcon';
 
 export const Drawer = () => {
   const drawerCheckboxRef = useRef(null);
-
+  const isServer = true;
   const closeDrawer = () => {
     if (drawerCheckboxRef.current) {
       drawerCheckboxRef.current.checked = false;
@@ -25,20 +26,7 @@ export const Drawer = () => {
             className="btn btn-ghost drawer-button absolute left-4 top-4 p-2"
             style={{ transition: 'transform 0.3s ease' }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /> </svg>
           </label>
           <Outlet />
         </div>
@@ -71,10 +59,13 @@ export const Drawer = () => {
           <li>
             <NavLink
               to={'/server'}
-              className={({ isActive }) => isActive ? "active" : ""}
+              className={({ isActive }) => isActive ? "active block" : "block"}
               onClick={closeDrawer}
             >
-              Server
+              <div className="flex justify-between align-middle">
+                <div>Server</div>
+                {isServer && <div><StatusIcon isTrue={true}/></div>}
+              </div>
             </NavLink>
           </li>
         </ul>
