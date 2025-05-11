@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { StatusIcon } from './StatusIcon'
+import React, { useState } from 'react';
+import { StatusIcon } from '../components/StatusIcon';
 
 const urls = [
   { id: 0, type: 'localhost', url: 'url' },
@@ -25,9 +25,9 @@ export const Server = () => {
       <div>
         <div>URL для подключения:</div>
         {urls.map(item=>(
-          <div class="url-item" key={item.id}>
-            <span class="url-type">{item.type}:</span>
-            <span class="url-value">{item.url}</span>
+          <div className="url-item" key={item.id}>
+            <span className="url-type">{item.type}:</span>
+            <span className="url-value">{item.url}</span>
             <button>Скопировать</button>
           </div>
         ))}

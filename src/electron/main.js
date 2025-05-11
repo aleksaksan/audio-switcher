@@ -3,6 +3,7 @@ import path from 'path';
 import { isDev } from './util.js';
 import { getPreloadPath } from './pathResolver.js';
 import { exec } from 'child_process';
+import os from 'os';
 // // import { pollResources } from './resourceManager.js';
 
 // app.on('ready', () => {
@@ -28,6 +29,12 @@ app.on('ready', () => {
       contextIsolation: true,
       sandbox: true
     }
+  //   webPreferences: {
+  //   preload: isDev() ? path.join(__dirname, 'preload.js') : getPreloadPath(),
+  //   contextIsolation: true,
+  //   sandbox: false, // Включаем для dev-режима
+  //   webSecurity: false // Только для dev!
+  // }
   });
 
   if (isDev()) {
@@ -50,4 +57,22 @@ ipcMain.handle('toggle-mute', (_, isMuted) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+
+ipcMain.handle('get-system-info', () => {
+  const getMACAddress = () => {
+    const interfaces = os.networkInterfaces();
+    for (const interfaceName in interfaces) {
+      const iface = interfaces[interfaceName].find(
+        i => !i.internal && i.mac && i.mac !== '00:00:00:00:00:00'
+      );
+      if (iface) return iface.mac;
+    }
+    return null;
+  };
+  return {
+    osVersion: os.arch(),
+    platform: os.platform(),
+    macAddress: getMACAddress() // Ваша функция для MAC-адреса
+  };
 });

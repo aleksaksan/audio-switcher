@@ -16,10 +16,13 @@
     "@tailwindcss/vite": "^4.1.6",
     "@types/os-utils": "^0.0.4",
     "daisyui": "^5.0.35",
+    "http": "^0.0.1-security",
     "os-utils": "^0.0.14",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router": "^7.6.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "tailwindcss": "^4.1.6"
   },
   "devDependencies": {

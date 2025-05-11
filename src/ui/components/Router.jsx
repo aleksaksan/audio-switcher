@@ -1,9 +1,9 @@
 import React from 'react'
 import { Route, Routes } from 'react-router'
 import { Drawer } from './Drawer'
-import { Home } from './Home'
-import { Settings } from './Settings'
-import { Server } from './Server'
+import { Home } from '../pages/Home'
+import { Server } from '../pages/Server'
+import { Settings } from '../pages/Settings'
 
 export const Router = () => {
   return (
