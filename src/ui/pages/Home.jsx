@@ -9,18 +9,18 @@ const listMock = [
 ]
 
 export const Home = () => {
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await window.electron.getSystemInfo();
-        console.log(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  // useEffect(() => {
+  //   const loadData = async () => {
+  //     try {
+  //       const data = await window.electron.getSystemInfo();
+  //       console.log(data);
+  //     } catch (err) {
+  //       console.error(err);
+  //     }
+  //   };
 
-    loadData();
-  }, []);
+  //   loadData();
+  // }, []);
   return (
     <div>
       <ConnectionStatus isConnected={true} />
