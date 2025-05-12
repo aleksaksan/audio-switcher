@@ -7,7 +7,7 @@ contextBridge.exposeInMainWorld('electron', {
   getCurrentUrls: () => ipcRenderer.invoke('get-server-urls'),
   stopServer: () => ipcRenderer.invoke('stop-server'),
   isServerRunning: () => ipcRenderer.invoke('get-server-status'),
-  
+
   onServerStatusUpdated: (callback) => {
     ipcRenderer.on('server-status-updated', (_, running) => callback(running));
   },
@@ -17,9 +17,3 @@ contextBridge.exposeInMainWorld('electron', {
   }
 });
 
-//TODO delete
-contextBridge.exposeInMainWorld('ipcRenderer', {
-  send: (channel, data) => ipcRenderer.send(channel, data),
-  on: (channel, func) =>
-    ipcRenderer.on(channel, (event, ...args) => func(event, ...args)),
-});

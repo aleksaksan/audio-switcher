@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ClientsList } from '../components/ClientsList';
+import { useClientList } from '../hooks/useClientList';
 
 const listMock = [
   { id: 0, title: "Comp 0", description: "description" },
@@ -9,18 +10,11 @@ const listMock = [
 ]
 
 export const Home = () => {
-  // useEffect(() => {
-  //   const loadData = async () => {
-  //     try {
-  //       const data = await window.electron.getSystemInfo();
-  //       console.log(data);
-  //     } catch (err) {
-  //       console.error(err);
-  //     }
-  //   };
-
-  //   loadData();
-  // }, []);
+  const clients = useClientList();
+  useEffect(() => {
+    console.log(clients)
+  }, [clients]);
+  
   return (
     <div>
       <ConnectionStatus isConnected={true} />

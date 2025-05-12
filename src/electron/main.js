@@ -2,7 +2,6 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { isDev } from './util.js';
 import { getPreloadPath } from './pathResolver.js';
-import { exec } from 'child_process';
 import os from 'os';
 import { Server } from 'socket.io';
 import http from 'http';
@@ -138,7 +137,12 @@ function getServerUrls(port) {
 // (5) Обновляем список клиентов и отправляем в React
 function updateClientList() {
   if (!io) return;
-  const clients = Array.from(io.sockets.sockets.keys());
+  const clients = Array.from(io.sockets.sockets).map(([id, socket]) => ({
+    id,
+    address: socket.handshake.address,
+    connected: socket.connected
+  }));
+  console.log('Updating client list:', clients);
   mainWindow.webContents.send('client-list', clients);
 }
 
