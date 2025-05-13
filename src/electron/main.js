@@ -51,7 +51,13 @@ ipcMain.handle('start-server', (event, port) => {
     }
 
     const newServer = http.createServer();
-    const newIO = new Server(newServer);
+    const newIO = new Server(newServer, {
+      cors: {
+        origin: "*", // Разрешаем подключения с любых источников
+        methods: ["GET", "POST"],
+        credentials: true
+      }
+    });
 
     newServer.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
@@ -137,13 +143,20 @@ function getServerUrls(port) {
 // (5) Обновляем список клиентов и отправляем в React
 function updateClientList() {
   if (!io) return;
+
   const clients = Array.from(io.sockets.sockets).map(([id, socket]) => ({
     id,
     address: socket.handshake.address,
-    connected: socket.connected
+    connected: socket.connected,
   }));
+
   console.log('Updating client list:', clients);
+
+  // (1) Отправляем в mainWindow для Electron UI
   mainWindow.webContents.send('client-list', clients);
+
+  // (2) Отправляем по Socket.IO всем подключенным клиентам
+  io.emit('client-list', clients);
 }
 
 ipcMain.handle('get-server-urls', () => {
@@ -154,4 +167,19 @@ ipcMain.handle('get-server-urls', () => {
 
 ipcMain.handle('get-server-status', () => {
   return !!server;
+});
+
+app.on('before-quit', async () => {
+  if (server) {
+    if (io) {
+      io.sockets.disconnectSockets(true);
+      io.close();
+      io = null;
+    }
+
+    server.close(() => {
+      console.log('Server stopped gracefully on app exit');
+      server = null;
+    });
+  }
 });
