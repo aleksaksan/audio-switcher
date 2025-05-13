@@ -1,28 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import { StatusIcon } from './StatusIcon';
+import { useServerStore } from '../store/serverStore';
 
 export const Drawer = () => {
   const drawerCheckboxRef = useRef(null);
-  const [isServerRunning, setIsServerRunning] = useState(false);
-  const isServer = true;
+  const { isServerRunning } = useServerStore();
   const closeDrawer = () => {
     if (drawerCheckboxRef.current) {
       drawerCheckboxRef.current.checked = false;
     }
   };
-
-  useEffect(() => {
-    const handleStatusUpdate = (running) => {
-      setIsServerRunning(running);
-    };
-  
-    window.electron.onServerStatusUpdated(handleStatusUpdate);
-  
-    return () => {
-      window.electron.offServerStatusUpdated(handleStatusUpdate);
-    };
-  }, []);
 
   return (
     <div className="drawer">
@@ -77,7 +65,7 @@ export const Drawer = () => {
             >
               <div className="flex justify-between align-middle">
                 <div>Server</div>
-                {isServer && <div><StatusIcon isTrue={isServerRunning}/></div>}
+                {isServerRunning && <div><StatusIcon isTrue={isServerRunning}/></div>}
               </div>
             </NavLink>
           </li>

@@ -5,6 +5,8 @@ import { getPreloadPath } from './pathResolver.js';
 import os from 'os';
 import { Server } from 'socket.io';
 import http from 'http';
+import loudness from 'loudness';
+import { exec } from 'child_process';
 
 // app.on('ready', () => {
 //   const mainWindow = new BrowserWindow({
@@ -22,6 +24,7 @@ import http from 'http';
 let mainWindow;
 let io = null;
 let server = null;
+const clientMuteStates = {};
 
 app.on('ready', () => {
   mainWindow = new BrowserWindow({
@@ -67,23 +70,27 @@ ipcMain.handle('start-server', (event, port) => {
       }
     });
 
-    // (3) Отслеживание состояния звука и передача всем клиентам
     newIO.on('connection', (socket) => {
       console.log('New client connected:', socket.id);
-
-      // (5) Отправляем список подключённых клиентов
+      clientMuteStates[socket.id] = false;
       updateClientList();
 
-      // (2) Клиент вызывает метод управления звуком
-      socket.on('toggle-sound', () => {
-        console.log(`Client ${socket.id} toggled sound`);
-        // (3) Сообщаем всем клиентам, что звук переключен
-        io.emit('sound-toggled', { clientId: socket.id });
+      socket.on('mute-client', (targetId) => {
+        const targetSocket = io.sockets.sockets.get(targetId);
+        if (targetSocket) {
+          targetSocket.emit('apply-mute');
+        }
+      });
+
+      socket.on('client-muted-state-updated', (isMuted) => {
+        clientMuteStates[socket.id] = isMuted;
+        updateClientList(); // разошлём обновление всем
       });
 
       // (5) Отслеживаем отключение клиента
       socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
+        delete clientMuteStates[socket.id];
         updateClientList();
       });
     });
@@ -140,22 +147,15 @@ function getServerUrls(port) {
   return urls;
 }
 
-// (5) Обновляем список клиентов и отправляем в React
 function updateClientList() {
-  if (!io) return;
-
   const clients = Array.from(io.sockets.sockets).map(([id, socket]) => ({
     id,
     address: socket.handshake.address,
     connected: socket.connected,
+    isMuted: clientMuteStates[id] || false,
   }));
 
-  console.log('Updating client list:', clients);
-
-  // (1) Отправляем в mainWindow для Electron UI
   mainWindow.webContents.send('client-list', clients);
-
-  // (2) Отправляем по Socket.IO всем подключенным клиентам
   io.emit('client-list', clients);
 }
 
@@ -169,6 +169,16 @@ ipcMain.handle('get-server-status', () => {
   return !!server;
 });
 
+ipcMain.handle('toggle-mute', async () => {
+  const isMuted = await loudness.getMuted();
+  await loudness.setMuted(!isMuted);
+  updateClientList();
+});
+
+ipcMain.handle('get-mute', async () => {
+  return await loudness.getMuted();
+});
+
 app.on('before-quit', async () => {
   if (server) {
     if (io) {
@@ -178,8 +188,17 @@ app.on('before-quit', async () => {
     }
 
     server.close(() => {
-      console.log('Server stopped gracefully on app exit');
+      console.log('Server stopped');
       server = null;
     });
+  }
+});
+
+ipcMain.handle('get-info', () => os.platform());
+
+ipcMain.handle('open-linux-install-terminal', () => {
+  if (os.platform() === 'linux') {
+    // Используем x-terminal-emulator, который есть почти на всех дистрибутивах
+    exec(`x-terminal-emulator -e 'bash -c "echo Установка ALSA-utils...; sudo apt update && sudo apt install alsa-utils; exec bash"'`);
   }
 });

@@ -15,8 +15,7 @@ export const ClientsList = ({ list }) => {
             id={item.id}
             title={item.title}
             description={item.description}
-            isMuted={false}
-            onMute={()=>{}}
+            isMuted={item.isMuted}
           />
         ))}
     

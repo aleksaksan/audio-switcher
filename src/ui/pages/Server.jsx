@@ -1,66 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { StatusIcon } from '../components/StatusIcon';
 import { Loader } from '../components/Loader';
+import { useServerStore } from '../store/serverStore';
 
 export const Server = () => {
-  const [port, setPort] = useState(5000);
-  const [isChecked, setIsChecked] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isServerRunning, setIsServerRunning] = useState(false);
-  const [serverUrls, setServerUrls] = useState([]);
-  
-  const setPortHandler = (event) => {
-    const value = Number(event.target.value)
-    if (!isNaN(value)) {
-      setPort(value);
-    } else {
-      console.log("PORT is not number!!!")
-    }
-  };
-
-  const startServer = async () => {
-    setIsLoading(true);
-    try {
-      const urls = await window.electron.startServer(port);
-      setIsChecked(true);
-      setIsServerRunning(true);
-      setServerUrls(urls);
-    } catch (error) {
-      console.error('Server error:', error);
-      setIsChecked(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const stopServer = async () => {
-    setIsLoading(true);
-    try {
-      await window.electron.stopServer();
-      setIsChecked(false);
-      setIsServerRunning(false);
-      setServerUrls([]);
-    } catch (error) {
-      console.error('Stop server error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const toggleServer = () => {
-    if (isChecked) {
-      stopServer();
-    } else {
-      startServer();
-    }
-  };
+  const {
+    port,
+    setPort,
+    isLoading,
+    isServerRunning,
+    serverUrls,
+    toggleServer,
+    checkServerStatus,
+  } = useServerStore();
 
   useEffect(() => {
-    window.electron.isServerRunning().then(running => {
-      setIsChecked(running);
-      setIsServerRunning(running);
-    });
-  },[])
+    checkServerStatus();
+  }, [checkServerStatus]);
+  
+  const setPortHandler = (e) => {
+    setPort(Number(e.target.value));
+  };
 
   return (
     <div className=''>
@@ -93,7 +53,7 @@ export const Server = () => {
       <input 
           type="checkbox" 
           className="toggle toggle-primary" 
-          checked={isChecked}
+          checked={isServerRunning}
           onChange={toggleServer}
           disabled={isLoading}
         />
