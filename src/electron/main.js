@@ -150,7 +150,7 @@ function getServerUrls(port) {
 function updateClientList() {
   const clients = Array.from(io.sockets.sockets).map(([id, socket]) => ({
     id,
-    address: socket.handshake.address,
+    name: os.hostname(),
     connected: socket.connected,
     isMuted: clientMuteStates[id] || false,
   }));
@@ -194,7 +194,12 @@ app.on('before-quit', async () => {
   }
 });
 
-ipcMain.handle('get-info', () => os.platform());
+ipcMain.handle('get-info', () => {
+  return {
+    platform: os.platform(),
+    hostname: os.hostname(),
+  }
+});
 
 ipcMain.handle('open-linux-install-terminal', () => {
   if (os.platform() === 'linux') {

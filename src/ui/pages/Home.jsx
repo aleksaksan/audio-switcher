@@ -19,7 +19,7 @@ export const Home = () => {
       {clients.length > 0 ? (
         <ClientsList list={clients.map(client => ({
           id: client.id,
-          title: client.address,
+          title: client.name,
           description: `ID: ${client.id}`,
           isMuted: client.isMuted,
         }))} />

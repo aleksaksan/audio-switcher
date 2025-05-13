@@ -4,9 +4,10 @@ import { handleConnectClick, SERVER_URL_KEY } from '../hooks/useSocket';
 export const Settings = () => {
   const [url, setUrl] = useState(localStorage.getItem(SERVER_URL_KEY).replace('http://', '') || '');
   const [platform, setPlatform] = useState('');
+  const [hostname, setHostname] = useState('');
   const changeUrl = (event) => {
     let inputUrl = event.target.value;
-    // Убираем 'http://' если пользователь его ввел
+    
     inputUrl = inputUrl.replace('http://', '');
     setUrl(inputUrl);
   };
@@ -20,7 +21,10 @@ export const Settings = () => {
   }
 
   useEffect(() => {
-    window.electron.getInfo().then(setPlatform);
+    window.electron.getInfo().then(data=>{
+      setPlatform(data.platform);
+      setHostname(data.hostname);
+    });
   }, []);
 
   return (
@@ -43,6 +47,7 @@ export const Settings = () => {
         Подключиться
       </button>
       <div>
+        <h2>Name: {hostname}</h2>
         <h3>OS: {platform}</h3>
         <div>
           {platform === 'linux' && (
