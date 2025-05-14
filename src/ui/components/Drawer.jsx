@@ -24,7 +24,7 @@ export const Drawer = () => {
         <div className="relative min-h-[100vh] min-w-[100vw]">
           <label
             htmlFor="my-drawer"
-            className="btn btn-ghost drawer-button absolute left-4 top-4 p-2"
+            className="btn btn-ghost drawer-button absolute left-4 top-2 p-2"
             style={{ transition: 'transform 0.3s ease' }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /> </svg>

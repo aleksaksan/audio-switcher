@@ -6,15 +6,17 @@ export const ClientsListItem = ({ id, title, description, isMuted}) => {
   const sendToggle = useSocketStore((state) => state.sendToggle);
 
   return (
-    <li className="list-row px-4xl">
+    <li className="list-row px-10">
       <div>
         <div>{title}</div>
         <div className="text-xs uppercase font-semibold opacity-60">{description}</div>
       </div>
-      <MuteButton
-        onClick={()=>sendToggle(id)}
-        isMuted={isMuted}
-      />
+      <div className="ml-auto">
+        <MuteButton
+          onClick={()=>sendToggle(id)}
+          isMuted={isMuted}
+        />
+      </div>
     </li>
   );
 };

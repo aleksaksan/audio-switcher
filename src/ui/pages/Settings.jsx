@@ -44,24 +44,28 @@ export const Settings = () => {
   }, []);
 
   return (
-    <div>
-      <h2>Настройки подключения</h2>
-      <label className="input">
-        <span className="label">http://</span>
-        <input 
-          type="text" 
-          placeholder="localhost:5000" 
-          value={url} 
-          onChange={changeUrl} 
-        />
-      </label>
-      <button 
-        className="btn btn-soft" 
-        onClick={connectToServer}
-        disabled={!url}
-      >
-        Подключиться
-      </button>
+    <div className="py-4 px-10">
+      <div className="pb-4 pl-10 flex justify-between items-center">
+        <h2 className="block">Настройки</h2>
+      </div>
+      <div className="text-center">
+        <label className="input">
+          <span className="label">http://</span>
+          <input 
+            type="text" 
+            placeholder="localhost:5000" 
+            value={url} 
+            onChange={changeUrl} 
+          />
+        </label>
+        <button 
+          className="btn btn-soft" 
+          onClick={connectToServer}
+          disabled={!url}
+        >
+          Подключиться
+        </button>
+      </div>
       <div className="mt-4">
         <h2>Имя компьютера: {hostname}</h2>
         <h3>OС: {platform}</h3>
@@ -69,14 +73,16 @@ export const Settings = () => {
 
           {platform === 'linux' && (
           <>
-            <p>
-              Для корректной работы приложение в OS Linux необходимо установить amixer. Вы можете это сделать выполнив следующие команды в терминале:<br/>
+            <p><br/>
+              Для корректной работы приложение в OS Linux необходимо установить amixer. Вы можете это сделать выполнив следующие команды в терминале:<br/><br/>
               sudo apt update<br/>
               sudo apt install alsa-utils
             </p>
-            <button className="btn btn-soft mt-4" onClick={() => window.electron.openLinuxInstallTerminal()}>
-              Установить alsa-utils
-            </button>
+            <div className="text-center">
+              <button className="btn btn-soft mt-4" onClick={() => window.electron.openLinuxInstallTerminal()}>
+                Установить alsa-utils
+              </button>
+            </div>
           </>
           )}
           
@@ -92,7 +98,7 @@ export const Settings = () => {
             {clients.map((client) => (
               <div
                 key={client.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-xl bg-gray-50 shadow-sm"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-xl shadow-sm"
               >
                 <div className="text-xs text-gray-500 break-all">{client.id}</div>
 
