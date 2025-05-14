@@ -28,7 +28,7 @@ const clientMuteStates = {};
 
 app.on('ready', () => {
   mainWindow = new BrowserWindow({
-    width: 1000,
+    width: 800,
     height: 600,
     webPreferences: {
       preload: getPreloadPath(),
@@ -107,6 +107,19 @@ ipcMain.handle('start-server', (event, port) => {
         console.log('Client disconnected:', socket.id);
         delete clientMuteStates[socket.id];
         updateClientList();
+      });
+
+      socket.on('broadcast-toggle-mute', () => {
+        for (const [_, targetSocket] of io.sockets.sockets) {
+          targetSocket.emit('apply-mute');
+        }
+      });
+
+      socket.on('force-mute-all', () => {
+        console.log('Forcing mute on all clients');
+        for (const [id, targetSocket] of io.sockets.sockets) {
+          targetSocket.emit('apply-mute');
+        }
       });
     });
 

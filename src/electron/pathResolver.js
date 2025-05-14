@@ -14,7 +14,7 @@ function validatePath(filePath, fileName) {
 export function getPreloadPath() {
   const preloadPath = path.join(
     app.getAppPath(),
-    isDev() ? 'src/electron' : 'dist',
+    isDev() ? 'src/electron' : 'dist-electron',
     'preload.cjs'
   );
   return validatePath(preloadPath, 'preload.cjs');

@@ -19,6 +19,17 @@ export const useSocketStore = create((set, get) => ({
   clients: [],
   isConnected: false,
   isMuted: false,
+  
+  initializeMuteAll: () => {
+    const socket = get().socket;
+    const clients = get().clients;
+
+    const hasUnmuted = clients.some(client => !client.isMuted);
+
+    if (socket && hasUnmuted) {
+      socket.emit('force-mute-all'); // новое событие
+    }
+  },
 
   connect: async (url) => {
     const currentSocket = get().socket;
@@ -99,5 +110,12 @@ export const useSocketStore = create((set, get) => ({
     }
 
     socket.emit('change-client-name', { id: targetId, name: newName });
+  },
+
+  broadcastToggleMute: () => {
+    const socket = get().socket;
+    if (socket) {
+      socket.emit('broadcast-toggle-mute');
+    }
   },
 }));

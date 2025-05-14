@@ -1,4 +1,6 @@
 {
+  "author": "aleksan",
+  "description": "Audio Device Switcher Application",
   "name": "audio-switcher",
   "private": true,
   "version": "0.0.0",
@@ -8,7 +10,10 @@
     "dev": "run-p dev:react dev:electron",
     "dev:react": "vite",
     "dev:electron": "cross-env NODE_ENV=development electron .",
-    "build": "vite build && electron-builder --win --x64",
+    "prebuild": "node scripts/copy-preload.js",
+    "build": "npm run prebuild && vite build && electron-builder --win --linux",
+    "build:win": "npm run prebuild && vite build && electron-builder --win",
+    "build:linux": "npm run prebuild && vite build && electron-builder --linux",
     "lint": "eslint .",
     "preview": "vite preview"
   },

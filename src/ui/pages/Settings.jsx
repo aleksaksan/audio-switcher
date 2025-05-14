@@ -3,7 +3,7 @@ import { handleConnectClick, SERVER_URL_KEY } from '../hooks/useSocket';
 import { useSocketStore } from '../store/socketStore';
 
 export const Settings = () => {
-  const [url, setUrl] = useState(localStorage.getItem(SERVER_URL_KEY).replace('http://', '') || '');
+  const [url, setUrl] = useState(localStorage.getItem(SERVER_URL_KEY)?.replace('http://', '') || '');
   const [platform, setPlatform] = useState('');
   const [hostname, setHostname] = useState('');
 
