@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { handleConnectClick, SERVER_URL_KEY } from '../hooks/useSocket';
+import { useSocketStore } from '../store/socketStore';
 
 export const Settings = () => {
   const [url, setUrl] = useState(localStorage.getItem(SERVER_URL_KEY).replace('http://', '') || '');
   const [platform, setPlatform] = useState('');
   const [hostname, setHostname] = useState('');
+
+  const { clients, updateClientName } = useSocketStore();
+  const [editNames, setEditNames] = useState({});
+
   const changeUrl = (event) => {
     let inputUrl = event.target.value;
     
@@ -19,6 +24,17 @@ export const Settings = () => {
       handleConnectClick(localStorage.getItem(SERVER_URL_KEY));
     }
   }
+
+  const handleNameChange = (id, newName) => {
+    setEditNames(prev => ({ ...prev, [id]: newName }));
+  };
+
+  const handleApplyName = (id) => {
+    const name = editNames[id];
+    if (name?.trim()) {
+      updateClientName(id, name.trim());
+    }
+  };
 
   useEffect(() => {
     window.electron.getInfo().then(data=>{
@@ -46,10 +62,11 @@ export const Settings = () => {
       >
         Подключиться
       </button>
-      <div>
-        <h2>Name: {hostname}</h2>
-        <h3>OS: {platform}</h3>
+      <div className="mt-4">
+        <h2>Имя компьютера: {hostname}</h2>
+        <h3>OС: {platform}</h3>
         <div>
+
           {platform === 'linux' && (
           <>
             <p>
@@ -62,7 +79,41 @@ export const Settings = () => {
             </button>
           </>
           )}
+          
         </div>
+      </div>
+      
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-2">Подключённые клиенты:</h3>
+        {clients.length === 0 ? (
+          <p className="text-gray-500">Нет подключённых клиентов.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {clients.map((client) => (
+              <div
+                key={client.id}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-xl bg-gray-50 shadow-sm"
+              >
+                <div className="text-xs text-gray-500 break-all">{client.id}</div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                  <input
+                    type="text"
+                    className="input input-sm w-full sm:w-48"
+                    value={editNames[client.id] ?? client.name}
+                    onChange={(e) => handleNameChange(client.id, e.target.value)}
+                  />
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => handleApplyName(client.id)}
+                  >
+                    Применить
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

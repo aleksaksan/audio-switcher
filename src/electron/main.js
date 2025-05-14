@@ -28,7 +28,7 @@ const clientMuteStates = {};
 
 app.on('ready', () => {
   mainWindow = new BrowserWindow({
-    width: 800,
+    width: 1000,
     height: 600,
     webPreferences: {
       preload: getPreloadPath(),
@@ -73,21 +73,36 @@ ipcMain.handle('start-server', (event, port) => {
     newIO.on('connection', (socket) => {
       console.log('New client connected:', socket.id);
       clientMuteStates[socket.id] = false;
+      socket.data.name = os.hostname(); // По умолчанию
+    
       updateClientList();
-
+    
+      socket.on('register-client', ({ id, name }) => {
+        socket.data.id = id;
+        socket.data.name = name || os.hostname();
+        updateClientList();
+      });
+      
+      socket.on('change-client-name', ({ id, name }) => {
+        const targetSocket = io.sockets.sockets.get(id);
+        if (targetSocket) {
+          targetSocket.data.name = name;
+          updateClientList();
+        }
+      });
+    
       socket.on('mute-client', (targetId) => {
         const targetSocket = io.sockets.sockets.get(targetId);
         if (targetSocket) {
           targetSocket.emit('apply-mute');
         }
       });
-
+    
       socket.on('client-muted-state-updated', (isMuted) => {
         clientMuteStates[socket.id] = isMuted;
-        updateClientList(); // разошлём обновление всем
+        updateClientList();
       });
-
-      // (5) Отслеживаем отключение клиента
+    
       socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
         delete clientMuteStates[socket.id];
@@ -102,7 +117,7 @@ ipcMain.handle('start-server', (event, port) => {
       const urls = getServerUrls(port).map(url => ({ url }));
       mainWindow.webContents.send('server-urls', urls);
       resolve(urls);
-      
+      //TODO delete
       mainWindow.webContents.send('server-status-updated', true);
     });
   });
@@ -150,7 +165,7 @@ function getServerUrls(port) {
 function updateClientList() {
   const clients = Array.from(io.sockets.sockets).map(([id, socket]) => ({
     id,
-    name: os.hostname(),
+    name: socket.data.name || os.hostname(),
     connected: socket.connected,
     isMuted: clientMuteStates[id] || false,
   }));

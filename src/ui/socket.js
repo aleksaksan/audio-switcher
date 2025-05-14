@@ -1,17 +1,17 @@
-import { io } from 'socket.io-client';
+// import { io } from 'socket.io-client';
 
-let socket = null;
+// let socket = null;
 
-export const connectToServer = (url) => {
-  if (socket && socket.connected) return socket;
+// export const connectToServer = (url) => {
+//   if (socket && socket.connected) return socket;
 
-  socket = io(url);
+//   socket = io(url);
 
-  socket.on('client-list', (clients) => {
-    console.log('client-list from server via socket:', clients);
-  });
+//   socket.on('client-list', (clients) => {
+//     console.log('client-list from server via socket:', clients);
+//   });
 
-  return socket;
-};
+//   return socket;
+// };
 
-export const getSocket = () => socket;
+// export const getSocket = () => socket;
