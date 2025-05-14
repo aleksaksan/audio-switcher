@@ -59,7 +59,7 @@ export const Settings = () => {
           />
         </label>
         <button 
-          className="btn btn-soft" 
+          className="btn" 
           onClick={connectToServer}
           disabled={!url}
         >
@@ -79,7 +79,7 @@ export const Settings = () => {
               sudo apt install alsa-utils
             </p>
             <div className="text-center">
-              <button className="btn btn-soft mt-4" onClick={() => window.electron.openLinuxInstallTerminal()}>
+              <button className="btn btn-sm" onClick={() => window.electron.openLinuxInstallTerminal()}>
                 Установить alsa-utils
               </button>
             </div>
@@ -98,7 +98,7 @@ export const Settings = () => {
             {clients.map((client) => (
               <div
                 key={client.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-xl shadow-sm"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 shadow-sm"
               >
                 <div className="text-xs text-gray-500 break-all">{client.id}</div>
 
@@ -110,7 +110,7 @@ export const Settings = () => {
                     onChange={(e) => handleNameChange(client.id, e.target.value)}
                   />
                   <button
-                    className="btn btn-sm btn-primary"
+                    className="btn btn-sm"
                     onClick={() => handleApplyName(client.id)}
                   >
                     Применить
