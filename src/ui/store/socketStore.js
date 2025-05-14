@@ -19,17 +19,7 @@ export const useSocketStore = create((set, get) => ({
   clients: [],
   isConnected: false,
   isMuted: false,
-  
-  initializeMuteAll: () => {
-    const socket = get().socket;
-    const clients = get().clients;
-
-    const hasUnmuted = clients.some(client => !client.isMuted);
-
-    if (socket && hasUnmuted) {
-      socket.emit('force-mute-all'); // новое событие
-    }
-  },
+  isAllMuted: false, 
 
   connect: async (url) => {
     const currentSocket = get().socket;
@@ -72,7 +62,10 @@ export const useSocketStore = create((set, get) => ({
 
     socket.on('client-list', (clients) => {
       console.log('[zustand] client-list received:', clients);
-      set({ clients });
+      set({ 
+        clients,
+        isAllMuted: clients.length > 0 && clients.every(client => client.isMuted)
+      });
     });
 
     socket.on('apply-mute', () => {
@@ -114,8 +107,16 @@ export const useSocketStore = create((set, get) => ({
 
   broadcastToggleMute: () => {
     const socket = get().socket;
-    if (socket) {
-      socket.emit('broadcast-toggle-mute');
+    const clients = get().clients;
+
+    if (!socket) return;
+
+    const hasUnmutedClient = clients.some(client => !client.isMuted);
+    
+    if (hasUnmutedClient) {
+      socket.emit('force-mute-all'); // сервер выключит у всех
+    } else {
+      socket.emit('broadcast-toggle-mute'); // обычное поведение
     }
   },
 }));

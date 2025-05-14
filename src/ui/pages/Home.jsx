@@ -1,4 +1,3 @@
-import React, { useEffect } from 'react';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ClientsList } from '../components/ClientsList';
 import { useSocketStore } from '../store/socketStore';
@@ -7,13 +6,8 @@ import { MuteButton } from '../components/MuteButton';
 export const Home = () => {
   const clients = useSocketStore((state) => state.clients);
   const isConnected = useSocketStore((state) => state.isConnected);
-  const isMuted = useSocketStore((state) => state.isMuted);
   const broadcastToggleMute = useSocketStore((state) => state.broadcastToggleMute);
-  const initializeMuteAll = useSocketStore((state) => state.initializeMuteAll);
-
-  useEffect(() => {
-    initializeMuteAll();
-  }, []);
+  const isAllMuted = useSocketStore((state) => state.isAllMuted);
 
   return (
     <div>
@@ -21,7 +15,11 @@ export const Home = () => {
         <ConnectionStatus isConnected={isConnected} />
       </div>
       <div className="py-2 px-10 text-end">
-        <span className="mr-8 text-xs opacity-60 ">Заглушить всех</span><MuteButton isMuted={isMuted} onClick={broadcastToggleMute} />
+        <span className="mr-8 text-xs opacity-60 ">Заглушить всех</span>
+        <MuteButton
+          isMuted={isAllMuted}
+          onClick={broadcastToggleMute}
+        />
       </div>
       {clients.length > 0 ? (
         <ClientsList list={clients.map(client => ({

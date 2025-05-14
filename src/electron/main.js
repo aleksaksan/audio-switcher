@@ -117,7 +117,7 @@ ipcMain.handle('start-server', (event, port) => {
 
       socket.on('force-mute-all', () => {
         console.log('Forcing mute on all clients');
-        for (const [id, targetSocket] of io.sockets.sockets) {
+        for (const [_, targetSocket] of io.sockets.sockets) {
           targetSocket.emit('apply-mute');
         }
       });
