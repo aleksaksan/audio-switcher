@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron';
 import path from 'path';
 import { isDev } from './util.js';
 import { getPreloadPath } from './pathResolver.js';
@@ -22,6 +22,8 @@ import { exec } from 'child_process';
 
 
 let mainWindow;
+let tray = null;
+let trayWindow = null;
 let io = null;
 let server = null;
 const clientMuteStates = {};
@@ -35,6 +37,92 @@ app.on('ready', () => {
       contextIsolation: true,
       sandbox: true
     }
+  });
+
+  const icon = nativeImage.createFromPath(path.join(path.dirname(new URL(import.meta.url).pathname.slice(1)), '../../build/icon.ico'));
+  tray = new Tray(icon);
+
+  // Создаем контекстное меню
+  const contextMenu = Menu.buildFromTemplate([
+    { 
+      label: 'Развернуть', 
+      click: () => {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    },
+    { type: 'separator' },
+    { 
+      label: 'Выход', 
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+
+  // Устанавливаем контекстное меню
+  tray.setContextMenu(contextMenu);
+
+  // Обработка двойного клика по иконке
+  tray.on('double-click', () => {
+    mainWindow.show();
+    mainWindow.focus();
+  });
+
+  // Обработка одиночного клика по иконке
+  tray.on('click', (event, bounds) => {
+    if (trayWindow && trayWindow.isVisible()) {
+      trayWindow.hide();
+    } else {
+      if (!trayWindow) {
+        trayWindow = new BrowserWindow({
+          width: 300,
+          height: 600,
+          frame: false,
+          show: false,
+          skipTaskbar: true,
+          webPreferences: {
+            preload: getPreloadPath(),
+            contextIsolation: true,
+            sandbox: true
+          }
+        });
+  
+        // Загружаем ту же страницу, что и в основном окне
+        if (isDev()) {
+          trayWindow.loadURL('http://localhost:5123/#/tray');
+        } else {
+          trayWindow.loadFile(path.join(app.getAppPath(), './dist-react/index.html'), {
+            hash: '/tray'
+          });
+        }
+  
+        // Закрываем окно при потере фокуса
+        trayWindow.on('blur', () => {
+          trayWindow.hide();
+        });
+  
+        // Предотвращаем закрытие окна, просто скрываем его
+        trayWindow.on('close', (event) => {
+          event.preventDefault();
+          trayWindow.hide();
+        });
+      }
+  
+      // Позиционируем окно рядом с иконкой трея
+      const { x, y } = bounds;
+      trayWindow.setPosition(x - trayWindow.getBounds().width/2, y - trayWindow.getBounds().height);
+      trayWindow.show();
+    }
+  });
+
+  // Обработка закрытия окна
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+    return false;
   });
 
   if (isDev()) {
@@ -205,6 +293,14 @@ ipcMain.handle('toggle-mute', async () => {
 
 ipcMain.handle('get-mute', async () => {
   return await loudness.getMuted();
+});
+
+app.on('before-quit', () => {
+  app.isQuitting = true;
+  if (trayWindow) {
+    trayWindow.destroy();
+    trayWindow = null;
+  }
 });
 
 app.on('before-quit', async () => {
