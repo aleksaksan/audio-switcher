@@ -8,19 +8,6 @@ import http from 'http';
 import loudness from 'loudness';
 import { exec } from 'child_process';
 
-// app.on('ready', () => {
-//   const mainWindow = new BrowserWindow({
-
-//   });
-//   if (isDev()) {
-//     mainWindow.loadURL('http://localhost:5123');
-//   } else {
-//     mainWindow.loadFile(path.join(app.getAppPath(), './dist-react/index.html'));
-//   }
-//   // pollResources();
-// })
-
-
 let mainWindow;
 let tray = null;
 let trayWindow = null;
