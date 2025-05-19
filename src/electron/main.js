@@ -95,6 +95,12 @@ app.on('ready', () => {
         trayWindow.webContents.on('did-finish-load', () => {
           trayWindow.webContents.send('client-list', clientList);
           trayWindow.webContents.send('connection-status', isConnected);
+
+          ipcMain.on('request-send-toggle', (event, clientId) => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('request-toggle-client', clientId);
+          }
+        });
         });
       }
 
@@ -106,8 +112,8 @@ app.on('ready', () => {
       trayWindow.show();
 
       
-      trayWindow.webContents.send('client-list', clientList);
-      trayWindow.webContents.send('connection-status', isConnected);
+      // trayWindow.webContents.send('client-list', clientList);
+      // trayWindow.webContents.send('connection-status', isConnected);
     }
   });
 
@@ -347,6 +353,21 @@ ipcMain.on('send-mute-all', () => {
 
 ipcMain.handle('request-client-list', () => clientList);
 ipcMain.handle('request-connection-status', () => isConnected);
+
+ipcMain.on('toggle-client-mute', (event, clientId) => {
+  // Пересылаем запрос в главное окно
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('request-toggle-client', clientId);
+  }
+});
+
+ipcMain.on('tray-ready', () => {
+  if (trayWindow && trayWindow.webContents) {
+    trayWindow.webContents.send('client-list', clientList);
+    trayWindow.webContents.send('connection-status', isConnected);
+  }
+});
+
 // =========================
 // App exit
 // =========================

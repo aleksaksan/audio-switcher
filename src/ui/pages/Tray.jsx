@@ -7,6 +7,10 @@ export const Tray = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [clients, setClients] = useState([]);
   const isAllmuted = clients?.length > 0 && clients.every(client => client.isMuted);
+  const handleToggleClient = (clientId) => {
+    console.log('Toggling client mute from tray:', clientId);
+    window.electron.sendToggleClient(clientId);
+  };
 
   useEffect(() => {
     window.electron.onConnectionStatus(setIsConnected);
@@ -14,6 +18,8 @@ export const Tray = () => {
 
     window.electron.requestClientList().then(setClients);
     window.electron.requestConnectionStatus().then(setIsConnected);
+
+    window.electron.sendTrayReady?.();
   
     return () => {
       window.electron.removeConnectionStatusListener();
@@ -43,7 +49,9 @@ export const Tray = () => {
             title: client.name,
             description: `ID: ${client.id}`,
             isMuted: client.isMuted,
-          }))} />
+          }))}
+            onToggleClient={handleToggleClient}
+          />
         ) : (
           <div className="text-center mt-2 opacity-60">
             Нет подключенных устройств

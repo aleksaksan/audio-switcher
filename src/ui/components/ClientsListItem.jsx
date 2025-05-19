@@ -1,9 +1,7 @@
 import React from 'react';
 import { MuteButton } from './MuteButton';
-import { useSocketStore } from '../store/socketStore';
 
-export const ClientsListItem = ({ id, title, description, isMuted}) => {
-  const sendToggle = useSocketStore((state) => state.sendToggle);
+export const ClientsListItem = ({ id, title, description, isMuted, onToggle }) => {
 
   return (
     <li className="list-row px-10">
@@ -13,7 +11,7 @@ export const ClientsListItem = ({ id, title, description, isMuted}) => {
       </div>
       <div className="ml-auto">
         <MuteButton
-          onClick={()=>sendToggle(id)}
+          onClick={() => onToggle(id)}
           isMuted={isMuted}
         />
       </div>
