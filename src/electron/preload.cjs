@@ -17,8 +17,11 @@ contextBridge.exposeInMainWorld('electron', {
   sendConnectionStatus: (status) => ipcRenderer.send('connection-status', status),
   onConnectionStatus: (callback) => ipcRenderer.on('connection-status', (_, status) => callback(status)),
   removeConnectionStatusListener: () => ipcRenderer.removeAllListeners('connection-status'),
+  requestClientList: () => ipcRenderer.invoke('request-client-list'),
+  requestConnectionStatus: () => ipcRenderer.invoke('request-connection-status'),
 
-  callMainWindowAction: (action) => ipcRenderer.invoke('call-main-window-action', action),
-  onActionFromTray: (callback) => ipcRenderer.on('action-from-tray', callback),
-  removeActionFromTrayListener: () => ipcRenderer.removeAllListeners('action-from-tray')
+  sendMuteAll: () => ipcRenderer.send('send-mute-all'),
+  onMuteAllTriggered: (callback) => ipcRenderer.on('mute-all-triggered', callback),
+  removeMuteAllTriggeredListener: () => ipcRenderer.removeAllListeners('mute-all-triggered'),
+  
 });

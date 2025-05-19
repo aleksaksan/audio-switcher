@@ -8,17 +8,12 @@ export const Tray = () => {
   const [clients, setClients] = useState([]);
   const isAllmuted = clients?.length > 0 && clients.every(client => client.isMuted);
 
-  const handleBroadcastToggle = async () => {
-    try {
-      await window.electron.callMainWindowAction('broadcastToggleMute');
-    } catch (error) {
-      console.error('Error calling main window:', error);
-    }
-  };
-
   useEffect(() => {
     window.electron.onConnectionStatus(setIsConnected);
     window.electron.onClientListUpdate(setClients);
+
+    window.electron.requestClientList().then(setClients);
+    window.electron.requestConnectionStatus().then(setIsConnected);
   
     return () => {
       window.electron.removeConnectionStatusListener();
@@ -26,6 +21,10 @@ export const Tray = () => {
     }
   }, []);
 
+  const toggleMute = () => {
+    window.electron.sendMuteAll();
+  };
+ 
   
     return (
       <div className="p-4 text-xs">
@@ -34,7 +33,7 @@ export const Tray = () => {
           {clients.length > 0 && (
             <MuteButton
               isMuted={isAllmuted}
-              onClick={handleBroadcastToggle}
+              onClick={toggleMute}
             />
           )}
         </div>

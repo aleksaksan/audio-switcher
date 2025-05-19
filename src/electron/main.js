@@ -15,6 +15,7 @@ let io = null;
 let server = null;
 const clientMuteStates = {};
 let isConnected = false;
+let clientList = [];
 
 // =========================
 // App ready
@@ -90,6 +91,11 @@ app.on('ready', () => {
           event.preventDefault();
           trayWindow.hide();
         });
+    
+        trayWindow.webContents.on('did-finish-load', () => {
+          trayWindow.webContents.send('client-list', clientList);
+          trayWindow.webContents.send('connection-status', isConnected);
+        });
       }
 
       const { x, y } = bounds;
@@ -99,7 +105,8 @@ app.on('ready', () => {
       );
       trayWindow.show();
 
-      updateClientList();
+      
+      trayWindow.webContents.send('client-list', clientList);
       trayWindow.webContents.send('connection-status', isConnected);
     }
   });
@@ -250,10 +257,8 @@ function getServerUrls(port) {
 
 function updateClientList() {
   if (!io) {
-    if (trayWindow) {
-      trayWindow.webContents.send('connection-status', false);
-      trayWindow.webContents.send('client-list', []);
-    }
+    const emptyList = [];
+    updateWindowsWithClientList(emptyList);
     return;
   }
 
@@ -264,10 +269,16 @@ function updateClientList() {
     isMuted: clientMuteStates[id] || false,
   }));
 
+  clientList = [...clients];
+  updateWindowsWithClientList(clientList);
   io.emit('client-list', clients);
+}
 
-  if (trayWindow) {
-    trayWindow.webContents.send('connection-status', true);
+function updateWindowsWithClientList(clients) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('client-list', clients);
+  }
+  if (trayWindow && !trayWindow.isDestroyed()) {
     trayWindow.webContents.send('client-list', clients);
   }
 }
@@ -315,19 +326,27 @@ ipcMain.on('connection-status', (_, status) => {
 });
 
 ipcMain.on('client-list', (_, clients) => {
+  clientList = clients;
   if (trayWindow) {
-    trayWindow.webContents.send('client-list', clients);
+    trayWindow.webContents.send('client-list', clientList);
   }
 });
 
-ipcMain.handle('call-main-window-action', (event, action) => {
-  if (mainWindow) {
-    mainWindow.webContents.send('action-from-tray', action);
-    return true;
+ipcMain.on('send-mute-all', () => {
+  if (io) {
+    for (const [, targetSocket] of io.sockets.sockets) {
+      targetSocket.emit('apply-mute');
+    }
+    updateClientList();
   }
-  return false;
+  
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mute-all-triggered');
+  }
 });
 
+ipcMain.handle('request-client-list', () => clientList);
+ipcMain.handle('request-connection-status', () => isConnected);
 // =========================
 // App exit
 // =========================

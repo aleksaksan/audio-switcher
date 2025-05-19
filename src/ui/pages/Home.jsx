@@ -5,22 +5,20 @@ import { MuteButton } from '../components/MuteButton';
 import { useEffect } from 'react';
 
 export const Home = () => {
-  const clients = useSocketStore((state) => state.clients);
-  const isConnected = useSocketStore((state) => state.isConnected);
-  const broadcastToggleMute = useSocketStore((state) => state.broadcastToggleMute);
-  const isAllMuted = useSocketStore((state) => state.isAllMuted);
+  const { clients, isConnected, broadcastToggleMute, isAllMuted } = useSocketStore();
 
   useEffect(() => {
-    const handleAction = (event, action) => {
-      if (action === 'broadcastToggleMute') {
-        broadcastToggleMute();
-      }
+    window.electron.sendClientList(clients);
+  }, [clients]);
+
+  useEffect(() => {
+    const handler = () => {
+      broadcastToggleMute();
     };
 
-    window.electron.onActionFromTray(handleAction);
-
+    window.electron.onMuteAllTriggered(handler);
     return () => {
-      window.electron.removeActionFromTrayListener();
+      window.electron.removeMuteAllTriggeredListener();
     };
   }, [broadcastToggleMute]);
 
