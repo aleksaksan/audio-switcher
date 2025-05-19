@@ -2,8 +2,10 @@ import React, { useRef } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import { StatusIcon } from './StatusIcon';
 import { useServerStore } from '../store/serverStore';
+import { useSocket } from '../hooks/useSocket';
 
 export const Drawer = () => {
+  useSocket();
   const drawerCheckboxRef = useRef(null);
   const { isServerRunning } = useServerStore();
   const closeDrawer = () => {

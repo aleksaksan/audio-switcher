@@ -9,4 +9,16 @@ contextBridge.exposeInMainWorld('electron', {
   isServerRunning: () => ipcRenderer.invoke('get-server-status'),
   startServer: (port) => ipcRenderer.invoke('start-server', port),
   openLinuxInstallTerminal: () => ipcRenderer.invoke('open-linux-install-terminal'),
+  //Tray:
+  sendClientList: (clients) => ipcRenderer.send('client-list', clients),
+  onClientListUpdate: (callback) => ipcRenderer.on('client-list', (_, clients) => callback(clients)),
+  removeClientListListener: () => ipcRenderer.removeAllListeners('client-list'),
+
+  sendConnectionStatus: (status) => ipcRenderer.send('connection-status', status),
+  onConnectionStatus: (callback) => ipcRenderer.on('connection-status', (_, status) => callback(status)),
+  removeConnectionStatusListener: () => ipcRenderer.removeAllListeners('connection-status'),
+
+  callMainWindowAction: (action) => ipcRenderer.invoke('call-main-window-action', action),
+  onActionFromTray: (callback) => ipcRenderer.on('action-from-tray', callback),
+  removeActionFromTrayListener: () => ipcRenderer.removeAllListeners('action-from-tray')
 });

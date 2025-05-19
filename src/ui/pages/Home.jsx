@@ -2,12 +2,27 @@ import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ClientsList } from '../components/ClientsList';
 import { useSocketStore } from '../store/socketStore';
 import { MuteButton } from '../components/MuteButton';
+import { useEffect } from 'react';
 
 export const Home = () => {
   const clients = useSocketStore((state) => state.clients);
   const isConnected = useSocketStore((state) => state.isConnected);
   const broadcastToggleMute = useSocketStore((state) => state.broadcastToggleMute);
   const isAllMuted = useSocketStore((state) => state.isAllMuted);
+
+  useEffect(() => {
+    const handleAction = (event, action) => {
+      if (action === 'broadcastToggleMute') {
+        broadcastToggleMute();
+      }
+    };
+
+    window.electron.onActionFromTray(handleAction);
+
+    return () => {
+      window.electron.removeActionFromTrayListener();
+    };
+  }, [broadcastToggleMute]);
 
   return (
     <div>
