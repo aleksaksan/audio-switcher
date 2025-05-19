@@ -20,10 +20,16 @@ export const Tray = () => {
     window.electron.requestConnectionStatus().then(setIsConnected);
 
     window.electron.sendTrayReady?.();
+
+    const intervalId = setInterval(() => {
+      window.electron.requestClientList().then(setClients);
+      window.electron.requestConnectionStatus().then(setIsConnected);
+    }, 2000);
   
     return () => {
       window.electron.removeConnectionStatusListener();
       window.electron.removeClientListListener();
+      clearInterval(intervalId);
     }
   }, []);
 
