@@ -169,7 +169,7 @@ ipcMain.handle('start-server', (event, port) => {
         const targetSocket = io.sockets.sockets.get(id);
         if (targetSocket) {
           targetSocket.data.name = name;
-          updateClientList();
+          setTimeout(updateClientList, 10);
         }
       });
 
@@ -182,7 +182,7 @@ ipcMain.handle('start-server', (event, port) => {
 
       socket.on('client-muted-state-updated', (isMuted) => {
         clientMuteStates[socket.id] = isMuted;
-        updateClientList();
+        setTimeout(updateClientList, 10);
       });
 
       socket.on('disconnect', () => {
