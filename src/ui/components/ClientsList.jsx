@@ -1,7 +1,7 @@
 import React from 'react';
 import { ClientsListItem } from './ClientsListItem';
 
-export const ClientsList = ({ list }) => {
+export const ClientsList = ({ list, onToggleClient }) => {
   return (
     <ul className="list bg-base-100 rounded-box shadow-md">
     
@@ -16,6 +16,7 @@ export const ClientsList = ({ list }) => {
             title={item.title}
             description={item.description}
             isMuted={item.isMuted}
+            onToggle={() => onToggleClient(item.id)}
           />
         ))}
     

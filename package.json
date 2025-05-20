@@ -10,7 +10,7 @@
     "dev": "run-p dev:react dev:electron",
     "dev:react": "vite",
     "dev:electron": "cross-env NODE_ENV=development electron .",
-    "prebuild": "node scripts/copy-preload.js",
+    "prebuild": "node scripts/copy-preload.js && node scripts/copy-icons.js",
     "build": "npm run prebuild && vite build && electron-builder --win --linux",
     "build:win": "npm run prebuild && vite build && electron-builder --win",
     "build:linux": "npm run prebuild && vite build && electron-builder --linux",

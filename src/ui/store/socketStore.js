@@ -14,6 +14,7 @@ import { io } from 'socket.io-client';
 //   disconnect: () => void;
 //   setClients: (clients: Client[]) => void;
 // }
+
 export const useSocketStore = create((set, get) => ({
   socket: null,
   clients: [],
@@ -32,7 +33,8 @@ export const useSocketStore = create((set, get) => ({
     socket.on('connect', async () => {
       console.log('[zustand] connected to', url);
       set({ isConnected: true });
-
+      
+      window.electron.sendConnectionStatus(true);
       const isMuted = await window.electron.getMute();
       set({ isMuted });
 
@@ -58,6 +60,7 @@ export const useSocketStore = create((set, get) => ({
     socket.on('disconnect', () => {
       console.log('[zustand] disconnected');
       set({ isConnected: false });
+      window.electron.sendConnectionStatus(false);
     });
 
     socket.on('client-list', (clients) => {
@@ -66,6 +69,7 @@ export const useSocketStore = create((set, get) => ({
         clients,
         isAllMuted: clients.length > 0 && clients.every(client => client.isMuted)
       });
+      window.electron.sendClientList(clients);
     });
 
     socket.on('apply-mute', () => {
@@ -89,8 +93,13 @@ export const useSocketStore = create((set, get) => ({
 
   sendToggle: (clientId) => {
     const socket = get().socket;
+    console.log('[sendToggle] called with clientId:', clientId);
+
     if (socket) {
+      console.log('[sendToggle] emitting mute-client...');
       socket.emit('mute-client', clientId);
+    } else {
+      console.warn('[sendToggle] No socket available');
     }
   },
 
@@ -114,9 +123,9 @@ export const useSocketStore = create((set, get) => ({
     const hasUnmutedClient = clients.some(client => !client.isMuted);
     
     if (hasUnmutedClient) {
-      socket.emit('force-mute-all'); // сервер выключит у всех
+      socket.emit('force-mute-all'); 
     } else {
-      socket.emit('broadcast-toggle-mute'); // обычное поведение
+      socket.emit('broadcast-toggle-mute');
     }
   },
 }));

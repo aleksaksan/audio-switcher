@@ -1,22 +1,53 @@
+import { useEffect, useState } from "react";
 import { ClientsList } from "../components/ClientsList";
 import { ConnectionStatus } from "../components/ConnectionStatus";
 import { MuteButton } from "../components/MuteButton";
-import { useSocketStore } from "../store/socketStore";
 
 export const Tray = () => {
-    const clients = useSocketStore((state) => state.clients);
-    const isConnected = useSocketStore((state) => state.isConnected);
-    const broadcastToggleMute = useSocketStore((state) => state.broadcastToggleMute);
-    const isAllMuted = useSocketStore((state) => state.isAllMuted);
+  const [isConnected, setIsConnected] = useState(false);
+  const [clients, setClients] = useState([]);
+  const isAllmuted = clients?.length > 0 && clients.every(client => client.isMuted);
+  const handleToggleClient = (clientId) => {
+    console.log('Toggling client mute from tray:', clientId);
+    window.electron.sendToggleClient(clientId);
+  };
+
+  useEffect(() => {
+    window.electron.onConnectionStatus(setIsConnected);
+    window.electron.onClientListUpdate(setClients);
+
+    window.electron.requestClientList().then(setClients);
+    window.electron.requestConnectionStatus().then(setIsConnected);
+
+    window.electron.sendTrayReady?.();
+
+    const intervalId = setInterval(() => {
+      window.electron.requestClientList().then(setClients);
+      window.electron.requestConnectionStatus().then(setIsConnected);
+    }, 2000);
+  
+    return () => {
+      window.electron.removeConnectionStatusListener();
+      window.electron.removeClientListListener();
+      clearInterval(intervalId);
+    }
+  }, []);
+
+  const toggleMute = () => {
+    window.electron.sendMuteAll();
+  };
+ 
   
     return (
       <div className="p-4 text-xs">
         <div className="flex items-center justify-between mb-2 p-4">
           <ConnectionStatus isConnected={isConnected} />
-          <MuteButton
-            isMuted={isAllMuted}
-            onClick={broadcastToggleMute}
-          />
+          {clients.length > 0 && (
+            <MuteButton
+              isMuted={isAllmuted}
+              onClick={toggleMute}
+            />
+          )}
         </div>
         {clients.length > 0 ? (
           <ClientsList list={clients.map(client => ({
@@ -24,7 +55,9 @@ export const Tray = () => {
             title: client.name,
             description: `ID: ${client.id}`,
             isMuted: client.isMuted,
-          }))} />
+          }))}
+            onToggleClient={handleToggleClient}
+          />
         ) : (
           <div className="text-center mt-2 opacity-60">
             Нет подключенных устройств

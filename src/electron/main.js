@@ -7,19 +7,10 @@ import { Server } from 'socket.io';
 import http from 'http';
 import loudness from 'loudness';
 import { exec } from 'child_process';
+import { fileURLToPath, pathToFileURL } from 'url';
 
-// app.on('ready', () => {
-//   const mainWindow = new BrowserWindow({
-
-//   });
-//   if (isDev()) {
-//     mainWindow.loadURL('http://localhost:5123');
-//   } else {
-//     mainWindow.loadFile(path.join(app.getAppPath(), './dist-react/index.html'));
-//   }
-//   // pollResources();
-// })
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWindow;
 let tray = null;
@@ -27,8 +18,14 @@ let trayWindow = null;
 let io = null;
 let server = null;
 const clientMuteStates = {};
+let isConnected = false;
+let clientList = [];
 
+// =========================
+// App ready
+// =========================
 app.on('ready', () => {
+  // Основное окно
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -39,37 +36,37 @@ app.on('ready', () => {
     }
   });
 
-  const icon = nativeImage.createFromPath(path.join(path.dirname(new URL(import.meta.url).pathname.slice(1)), '../../build/icon.ico'));
-  tray = new Tray(icon);
+  // Иконка трея
+  const iconPath = isDev()
+    ? path.join(__dirname, '../build/icon.ico')
+    : path.join(app.getAppPath(), 'dist/assets/icon.ico');
 
-  // Создаем контекстное меню
-  const contextMenu = Menu.buildFromTemplate([
-    { 
-      label: 'Развернуть', 
+  const icon = nativeImage.createFromPath(pathToFileURL(iconPath).pathname);
+  tray = new Tray(icon);
+  
+
+  tray.setContextMenu(Menu.buildFromTemplate([
+    {
+      label: 'Развернуть',
       click: () => {
         mainWindow.show();
         mainWindow.focus();
       }
     },
     { type: 'separator' },
-    { 
-      label: 'Выход', 
+    {
+      label: 'Выход',
       click: () => {
         app.quit();
       }
     }
-  ]);
+  ]));
 
-  // Устанавливаем контекстное меню
-  tray.setContextMenu(contextMenu);
-
-  // Обработка двойного клика по иконке
   tray.on('double-click', () => {
     mainWindow.show();
     mainWindow.focus();
   });
 
-  // Обработка одиночного клика по иконке
   tray.on('click', (event, bounds) => {
     if (trayWindow && trayWindow.isVisible()) {
       trayWindow.hide();
@@ -87,8 +84,7 @@ app.on('ready', () => {
             sandbox: true
           }
         });
-  
-        // Загружаем ту же страницу, что и в основном окне
+
         if (isDev()) {
           trayWindow.loadURL('http://localhost:5123/#/tray');
         } else {
@@ -96,27 +92,33 @@ app.on('ready', () => {
             hash: '/tray'
           });
         }
-  
-        // Закрываем окно при потере фокуса
-        trayWindow.on('blur', () => {
-          trayWindow.hide();
-        });
-  
-        // Предотвращаем закрытие окна, просто скрываем его
+
+        trayWindow.on('blur', () => trayWindow.hide());
         trayWindow.on('close', (event) => {
           event.preventDefault();
           trayWindow.hide();
         });
+    
+        trayWindow.webContents.on('did-finish-load', () => {
+          trayWindow.webContents.send('client-list', clientList);
+          trayWindow.webContents.send('connection-status', isConnected);
+
+        });
       }
-  
-      // Позиционируем окно рядом с иконкой трея
+
       const { x, y } = bounds;
-      trayWindow.setPosition(x - trayWindow.getBounds().width/2, y - trayWindow.getBounds().height);
+      trayWindow.setPosition(
+        x - trayWindow.getBounds().width / 2,
+        y - trayWindow.getBounds().height
+      );
       trayWindow.show();
+
+      
+      // trayWindow.webContents.send('client-list', clientList);
+      // trayWindow.webContents.send('connection-status', isConnected);
     }
   });
 
-  // Обработка закрытия окна
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
       event.preventDefault();
@@ -132,11 +134,13 @@ app.on('ready', () => {
   }
 });
 
-//SERVER
+// =========================
+// Server logic
+// =========================
 ipcMain.handle('start-server', (event, port) => {
   return new Promise((resolve, reject) => {
     if (server) {
-      server.close(); // Закрываем предыдущий сервер, если он был
+      server.close();
       server = null;
       io = null;
     }
@@ -144,10 +148,72 @@ ipcMain.handle('start-server', (event, port) => {
     const newServer = http.createServer();
     const newIO = new Server(newServer, {
       cors: {
-        origin: "*", // Разрешаем подключения с любых источников
-        methods: ["GET", "POST"],
+        origin: '*',
+        methods: ['GET', 'POST'],
         credentials: true
       }
+    });
+
+    newIO.on('connection', (socket) => {
+      console.log('New client connected:', socket.id);
+      clientMuteStates[socket.id] = false;
+      socket.data.name = os.hostname();
+
+      updateClientList();
+
+      socket.on('register-client', ({ id, name }) => {
+        socket.data.id = id;
+        socket.data.name = name || os.hostname();
+        updateClientList();
+      });
+
+      socket.on('change-client-name', ({ id, name }) => {
+        const targetSocket = io.sockets.sockets.get(id);
+        if (targetSocket) {
+          targetSocket.data.name = name;
+          setTimeout(updateClientList, 10);
+        }
+      });
+
+      socket.on('mute-client', (targetId) => {
+        const targetSocket = io.sockets.sockets.get(targetId);
+        if (targetSocket) {
+          targetSocket.emit('apply-mute');
+        }
+      });
+
+      socket.on('client-muted-state-updated', (isMuted) => {
+        clientMuteStates[socket.id] = isMuted;
+        setTimeout(updateClientList, 10);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+        delete clientMuteStates[socket.id];
+        updateClientList();
+      });
+
+      socket.on('broadcast-toggle-mute', () => {
+        for (const [, targetSocket] of io.sockets.sockets) {
+          targetSocket.emit('apply-mute');
+        }
+      });
+
+      socket.on('force-mute-all', () => {
+        console.log('Forcing mute on all clients');
+        for (const [, targetSocket] of io.sockets.sockets) {
+          targetSocket.emit('apply-mute');
+        }
+      });
+    });
+
+    newServer.listen(port, () => {
+      server = newServer;
+      io = newIO;
+      const urls = getServerUrls(port).map(url => ({ url }));
+      mainWindow.webContents.send('server-urls', urls);
+      mainWindow.webContents.send('server-status-updated', true);
+      resolve(urls);
     });
 
     newServer.on('error', (err) => {
@@ -157,93 +223,27 @@ ipcMain.handle('start-server', (event, port) => {
         reject(err);
       }
     });
-
-    newIO.on('connection', (socket) => {
-      console.log('New client connected:', socket.id);
-      clientMuteStates[socket.id] = false;
-      socket.data.name = os.hostname(); // По умолчанию
-    
-      updateClientList();
-    
-      socket.on('register-client', ({ id, name }) => {
-        socket.data.id = id;
-        socket.data.name = name || os.hostname();
-        updateClientList();
-      });
-      
-      socket.on('change-client-name', ({ id, name }) => {
-        const targetSocket = io.sockets.sockets.get(id);
-        if (targetSocket) {
-          targetSocket.data.name = name;
-          updateClientList();
-        }
-      });
-    
-      socket.on('mute-client', (targetId) => {
-        const targetSocket = io.sockets.sockets.get(targetId);
-        if (targetSocket) {
-          targetSocket.emit('apply-mute');
-        }
-      });
-    
-      socket.on('client-muted-state-updated', (isMuted) => {
-        clientMuteStates[socket.id] = isMuted;
-        updateClientList();
-      });
-    
-      socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
-        delete clientMuteStates[socket.id];
-        updateClientList();
-      });
-
-      socket.on('broadcast-toggle-mute', () => {
-        for (const [_, targetSocket] of io.sockets.sockets) {
-          targetSocket.emit('apply-mute');
-        }
-      });
-
-      socket.on('force-mute-all', () => {
-        console.log('Forcing mute on all clients');
-        for (const [_, targetSocket] of io.sockets.sockets) {
-          targetSocket.emit('apply-mute');
-        }
-      });
-    });
-
-    newServer.listen(port, () => {
-      server = newServer;
-      io = newIO;
-      console.log(`Server started on port ${port}`);
-      const urls = getServerUrls(port).map(url => ({ url }));
-      mainWindow.webContents.send('server-urls', urls);
-      resolve(urls);
-      //TODO delete
-      mainWindow.webContents.send('server-status-updated', true);
-    });
   });
 });
 
 ipcMain.handle('stop-server', () => {
   return new Promise((resolve) => {
     if (server) {
-      // Закрываем Socket.IO соединения
       if (io) {
         io.sockets.disconnectSockets(true);
         io.close();
         io = null;
       }
 
-      // Закрываем HTTP сервер
       server.close(() => {
         server = null;
-        console.log('Server stopped successfully');
+        console.log('Server stopped');
         resolve(true);
       });
     } else {
-      console.log('Server was not running');
       resolve(false);
     }
+
     mainWindow.webContents.send('server-status-updated', false);
   });
 });
@@ -264,6 +264,12 @@ function getServerUrls(port) {
 }
 
 function updateClientList() {
+  if (!io) {
+    const emptyList = [];
+    updateWindowsWithClientList(emptyList);
+    return;
+  }
+
   const clients = Array.from(io.sockets.sockets).map(([id, socket]) => ({
     id,
     name: socket.data.name || os.hostname(),
@@ -271,12 +277,25 @@ function updateClientList() {
     isMuted: clientMuteStates[id] || false,
   }));
 
-  mainWindow.webContents.send('client-list', clients);
+  clientList = [...clients];
+  updateWindowsWithClientList(clientList);
   io.emit('client-list', clients);
 }
 
+function updateWindowsWithClientList(clients) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('client-list', clients);
+  }
+  if (trayWindow && !trayWindow.isDestroyed()) {
+    trayWindow.webContents.send('client-list', clients);
+  }
+}
+
+// =========================
+// IPC handlers
+// =========================
 ipcMain.handle('get-server-urls', () => {
-  if (!server) return [];
+  if (!server || !server.address()) return [];
   const port = server.address().port;
   return getServerUrls(port).map(url => ({ url }));
 });
@@ -285,9 +304,8 @@ ipcMain.handle('get-server-status', () => {
   return !!server;
 });
 
-ipcMain.handle('toggle-mute', async () => {
-  const isMuted = await loudness.getMuted();
-  await loudness.setMuted(!isMuted);
+ipcMain.handle('toggle-mute', async (event, isMuted) => {
+  await loudness.setMuted(isMuted);
   updateClientList();
 });
 
@@ -295,15 +313,80 @@ ipcMain.handle('get-mute', async () => {
   return await loudness.getMuted();
 });
 
+ipcMain.handle('get-info', () => {
+  return {
+    platform: os.platform(),
+    hostname: os.hostname(),
+  };
+});
+
+ipcMain.handle('open-linux-install-terminal', () => {
+  if (os.platform() === 'linux') {
+    exec(`x-terminal-emulator -e 'bash -c "echo Установка ALSA-utils...; sudo apt update && sudo apt install alsa-utils; exec bash"'`);
+  }
+});
+
+ipcMain.on('connection-status', (_, status) => {
+  isConnected = status;
+  if (trayWindow) {
+    trayWindow.webContents.send('connection-status', isConnected);
+  }
+});
+
+ipcMain.on('client-list', (_, clients) => {
+  clientList = clients;
+  if (trayWindow) {
+    trayWindow.webContents.send('client-list', clientList);
+  }
+});
+
+ipcMain.on('send-mute-all', () => {
+  if (io) {
+    for (const [, targetSocket] of io.sockets.sockets) {
+      targetSocket.emit('apply-mute');
+    }
+    updateClientList();
+  }
+  
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mute-all-triggered');
+  }
+});
+
+ipcMain.handle('request-client-list', () => clientList);
+ipcMain.handle('request-connection-status', () => isConnected);
+
+ipcMain.on('toggle-client-mute', (event, clientId) => {
+  // Пересылаем запрос в главное окно
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('request-toggle-client', clientId);
+  }
+});
+
+ipcMain.on('tray-ready', () => {
+  if (trayWindow && trayWindow.webContents) {
+    trayWindow.webContents.send('client-list', clientList);
+    trayWindow.webContents.send('connection-status', isConnected);
+  }
+});
+
+ipcMain.on('request-send-toggle', (event, clientId) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('request-toggle-client', clientId);
+  }
+});
+
+// =========================
+// App exit
+// =========================
 app.on('before-quit', () => {
   app.isQuitting = true;
+
   if (trayWindow) {
     trayWindow.destroy();
     trayWindow = null;
   }
-});
 
-app.on('before-quit', async () => {
   if (server) {
     if (io) {
       io.sockets.disconnectSockets(true);
@@ -312,22 +395,8 @@ app.on('before-quit', async () => {
     }
 
     server.close(() => {
-      console.log('Server stopped');
+      console.log('Server closed on app exit');
       server = null;
     });
-  }
-});
-
-ipcMain.handle('get-info', () => {
-  return {
-    platform: os.platform(),
-    hostname: os.hostname(),
-  }
-});
-
-ipcMain.handle('open-linux-install-terminal', () => {
-  if (os.platform() === 'linux') {
-    // Используем x-terminal-emulator, который есть почти на всех дистрибутивах
-    exec(`x-terminal-emulator -e 'bash -c "echo Установка ALSA-utils...; sudo apt update && sudo apt install alsa-utils; exec bash"'`);
   }
 });
