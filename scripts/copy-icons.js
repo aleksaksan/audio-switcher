@@ -4,16 +4,22 @@ import path from 'path';
 const __dirname = path.resolve(); // Используем path.resolve() в ESM
 const srcIco = path.join(__dirname, 'build', 'icon.ico');
 const srcPng = path.join(__dirname, 'build', 'icon.png');
-const destDir = path.join(__dirname, 'dist-electron');
+const destDirElectron = path.join(__dirname, 'dist-electron');
+const destDirAssets = path.join(__dirname, 'dist', 'assets');
 
 const targets = [
-  { from: srcIco, to: path.join(destDir, 'icon.ico') },
-  { from: srcPng, to: path.join(destDir, 'icon.png') },
+  { from: srcIco, to: path.join(destDirElectron, 'icon.ico') },
+  { from: srcPng, to: path.join(destDirElectron, 'icon.png') },
+  { from: srcIco, to: path.join(destDirAssets, 'icon.ico') },
+  { from: srcPng, to: path.join(destDirAssets, 'icon.png') },
 ];
 
-if (!fs.existsSync(destDir)) {
-  fs.mkdirSync(destDir, { recursive: true });
-}
+// Создаем директории, если они не существуют
+[destDirElectron, destDirAssets].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 targets.forEach(({ from, to }) => {
   if (fs.existsSync(from)) {

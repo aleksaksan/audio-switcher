@@ -1,7 +1,17 @@
 {
   "appId": "com.aleksan.audio-switcher",
   "files": ["dist", "dist-react"],
-  "extraResources": ["dist-electron/preload.cjs"],
+  "extraResources": [
+    "dist-electron/preload.cjs",
+    {
+      "from": "build/icon.ico",
+      "to": "dist/assets/icon.ico"
+    },
+    {
+      "from": "build/icon.png",
+      "to": "dist/assets/icon.png"
+    }
+  ],
   "Linux": {
     "target": ["AppImage"],
     "icon": "build/icon.png",

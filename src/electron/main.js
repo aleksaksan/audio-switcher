@@ -7,6 +7,10 @@ import { Server } from 'socket.io';
 import http from 'http';
 import loudness from 'loudness';
 import { exec } from 'child_process';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWindow;
 let tray = null;
@@ -33,10 +37,13 @@ app.on('ready', () => {
   });
 
   // Иконка трея
-  const icon = nativeImage.createFromPath(
-    path.join(path.dirname(new URL(import.meta.url).pathname.slice(1)), '../../build/icon.ico')
-  );
+  const iconPath = isDev()
+    ? path.join(__dirname, '../build/icon.ico')
+    : path.join(app.getAppPath(), 'dist/assets/icon.ico');
+
+  const icon = nativeImage.createFromPath(pathToFileURL(iconPath).pathname);
   tray = new Tray(icon);
+  
 
   tray.setContextMenu(Menu.buildFromTemplate([
     {
@@ -96,11 +103,6 @@ app.on('ready', () => {
           trayWindow.webContents.send('client-list', clientList);
           trayWindow.webContents.send('connection-status', isConnected);
 
-          ipcMain.on('request-send-toggle', (event, clientId) => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('request-toggle-client', clientId);
-          }
-        });
         });
       }
 
@@ -293,7 +295,7 @@ function updateWindowsWithClientList(clients) {
 // IPC handlers
 // =========================
 ipcMain.handle('get-server-urls', () => {
-  if (!server) return [];
+  if (!server || !server.address()) return [];
   const port = server.address().port;
   return getServerUrls(port).map(url => ({ url }));
 });
@@ -365,6 +367,12 @@ ipcMain.on('tray-ready', () => {
   if (trayWindow && trayWindow.webContents) {
     trayWindow.webContents.send('client-list', clientList);
     trayWindow.webContents.send('connection-status', isConnected);
+  }
+});
+
+ipcMain.on('request-send-toggle', (event, clientId) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('request-toggle-client', clientId);
   }
 });
 
