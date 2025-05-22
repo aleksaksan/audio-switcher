@@ -30,4 +30,10 @@ contextBridge.exposeInMainWorld('electron', {
   removeToggleClientListener: () => ipcRenderer.removeAllListeners('request-toggle-client'),
 
   sendTrayReady: () => ipcRenderer.send('tray-ready'),
+  
+  // Функции для настройки позиции трея
+  setTrayPosition: (position) => ipcRenderer.send('set-tray-position', position),
+  getTrayPosition: () => ipcRenderer.invoke('get-tray-position'),
+
+  resizeWindow: (width, height) => ipcRenderer.send('resize-window', width, height),
 });

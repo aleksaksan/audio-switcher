@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen } from 'electron';
 import path from 'path';
 import { isDev } from './util.js';
 import { getPreloadPath } from './pathResolver.js';
@@ -12,11 +12,20 @@ import { fileURLToPath, pathToFileURL } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Константы для позиций трея
+const TRAY_POSITIONS = {
+  TOP_CENTER: 'top-center',
+  BOTTOM_CENTER: 'bottom-center',
+  LEFT_CENTER: 'left-center',
+  RIGHT_CENTER: 'right-center',
+};
+
 let mainWindow;
 let tray = null;
 let trayWindow = null;
 let io = null;
 let server = null;
+let trayPosition = TRAY_POSITIONS.BOTTOM_CENTER; // Позиция по умолчанию
 const clientMuteStates = {};
 let isConnected = false;
 let clientList = [];
@@ -25,7 +34,12 @@ let clientList = [];
 // App ready
 // =========================
 app.on('ready', () => {
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    args: ['--hidden']
+  });
   // Основное окно
+
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -33,9 +47,19 @@ app.on('ready', () => {
       preload: getPreloadPath(),
       contextIsolation: true,
       sandbox: true
-    }
+    },
+    show: false // Не показывать окно при запуске
   });
-
+  
+  // Проверяем, был ли запуск автоматическим
+  const wasAutoLaunched = process.argv.includes('--autostart') || 
+                          !app.commandLine.hasSwitch('hidden') || 
+                          app.getLoginItemSettings().wasOpenedAtLogin;
+  
+  // Показываем окно только если это не автозапуск
+  if (!wasAutoLaunched) {
+    mainWindow.show();
+  }
   // Иконка трея
   const iconPath = isDev()
     ? path.join(__dirname, '../build/icon.ico')
@@ -74,16 +98,27 @@ app.on('ready', () => {
       if (!trayWindow) {
         trayWindow = new BrowserWindow({
           width: 300,
-          height: 600,
+          height: 100,
           frame: false,
-          show: false,
+          show: true,
           skipTaskbar: true,
+          transparent: true,
+          alwaysOnTop: true,
+          backgroundColor: '#00000000',
+          titleBarStyle: 'hidden',
+          resizable: true,
+          autoHideMenuBar: true,
+          movable: true, 
           webPreferences: {
             preload: getPreloadPath(),
             contextIsolation: true,
             sandbox: true
           }
         });
+
+        if (isDev()) {
+          trayWindow.webContents.openDevTools({ mode: 'detach' });
+        }
 
         if (isDev()) {
           trayWindow.loadURL('http://localhost:5123/#/tray');
@@ -93,7 +128,11 @@ app.on('ready', () => {
           });
         }
 
-        trayWindow.on('blur', () => trayWindow.hide());
+        trayWindow.on('blur', () => {
+          trayWindow.setBackgroundColor('#00000000')
+          trayWindow.setOpacity(1) 
+        });
+
         trayWindow.on('close', (event) => {
           event.preventDefault();
           trayWindow.hide();
@@ -102,20 +141,16 @@ app.on('ready', () => {
         trayWindow.webContents.on('did-finish-load', () => {
           trayWindow.webContents.send('client-list', clientList);
           trayWindow.webContents.send('connection-status', isConnected);
-
+          trayWindow.webContents.executeJavaScript(`
+            const { width, height } = document.body.getBoundingClientRect()
+            window.electron.resizeWindow(width, height)
+          `)
         });
       }
 
-      const { x, y } = bounds;
-      trayWindow.setPosition(
-        x - trayWindow.getBounds().width / 2,
-        y - trayWindow.getBounds().height
-      );
+      // Позиционируем окно трея в соответствии с настройками
+      positionTrayWindow(bounds);
       trayWindow.show();
-
-      
-      // trayWindow.webContents.send('client-list', clientList);
-      // trayWindow.webContents.send('connection-status', isConnected);
     }
   });
 
@@ -376,6 +411,13 @@ ipcMain.on('request-send-toggle', (event, clientId) => {
   }
 });
 
+ipcMain.on('resize-window', (event, width, height) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (win) {
+    win.setSize(width, height);
+  }
+})
+
 // =========================
 // App exit
 // =========================
@@ -400,3 +442,60 @@ app.on('before-quit', () => {
     });
   }
 });
+
+
+setTimeout(() => {
+const bounds = tray.getBounds();
+tray.emit('click', {}, bounds);
+}, 1000); // Небольшая задержка для уверенности, что приложение полностью загрузилось
+
+
+// Функция для позиционирования окна трея
+function positionTrayWindow(bounds) {
+  if (!trayWindow) return;
+  
+  const { width: trayWidth, height: trayHeight } = trayWindow.getBounds();
+  const { x, y, } = bounds;
+  // Используем импортированный electron вместо require
+  const screenBounds = screen.getPrimaryDisplay().workAreaSize;
+  
+  let posX, posY;
+  
+  switch (trayPosition) {
+    case TRAY_POSITIONS.TOP_CENTER:
+      posX = Math.round(screenBounds.width / 2 - trayWidth / 2);
+      posY = 0;
+      break;
+    case TRAY_POSITIONS.BOTTOM_CENTER:
+      posX = Math.round(screenBounds.width / 2 - trayWidth / 2);
+      posY = screenBounds.height - trayHeight;
+      break;
+    case TRAY_POSITIONS.LEFT_CENTER:
+      posX = 0;
+      posY = Math.round(screenBounds.height / 2 - trayHeight / 2);
+      break;
+    case TRAY_POSITIONS.RIGHT_CENTER:
+      posX = screenBounds.width - trayWidth;
+      posY = Math.round(screenBounds.height / 2 - trayHeight / 2);
+      break;
+    default:
+      // По умолчанию - под иконкой трея
+      posX = x - trayWidth / 2;
+      posY = y - trayHeight;
+  }
+  
+  trayWindow.setPosition(posX, posY);
+}
+
+ipcMain.on('set-tray-position', (event, position) => {
+  trayPosition = position;
+  // Если окно трея открыто, обновляем его позицию
+  if (trayWindow && trayWindow.isVisible()) {
+    positionTrayWindow(tray.getBounds());
+  }
+});
+
+ipcMain.handle('get-tray-position', () => {
+  return trayPosition;
+});
+

@@ -7,6 +7,15 @@ import { useEffect } from 'react';
 export const Home = () => {
   const { clients, isConnected, broadcastToggleMute, isAllMuted, sendToggle } = useSocketStore();
 
+  // Функция для сортировки клиентов по порядковому номеру
+  const getSortedClients = () => {
+    return [...clients].sort((a, b) => {
+      const orderA = parseInt(localStorage.getItem(`client_order_${a.id}`)) || 9999;
+      const orderB = parseInt(localStorage.getItem(`client_order_${b.id}`)) || 9999;
+      return orderA - orderB;
+    });
+  };
+
   useEffect(() => {
     window.electron.sendClientList(clients);
   }, [clients]);
@@ -34,6 +43,8 @@ export const Home = () => {
     };
   }, [broadcastToggleMute]);
 
+  const sortedClients = getSortedClients();
+
   return (
     <div>
       <div className="py-4 px-10">
@@ -47,7 +58,7 @@ export const Home = () => {
         />
       </div>
       {clients.length > 0 ? (
-        <ClientsList list={clients.map(client => ({
+        <ClientsList list={sortedClients.map(client => ({
           id: client.id,
           title: client.name,
           description: `ID: ${client.id}`,
