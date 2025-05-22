@@ -4,7 +4,7 @@ import { TrayClientListItem } from './TrayClientListItem';
 export const TrayClientList = ({ isVertical, list, onToggleClient }) => {
   
   return (
-    <ul className={`flex gap-4 flex-nowrap${isVertical ? " flex-col" : " flex-row"}`}>
+    <ul className={`flex gap-4 flex-nowrap w-full${isVertical ? " flex-col" : " flex-row"}`}>
       {list.map(item =>(
         <TrayClientListItem
           key={item.id}

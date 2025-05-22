@@ -17,11 +17,7 @@ export const Tray = () => {
 
   // Функция для сортировки клиентов по порядковому номеру
   const getSortedClients = () => {
-    return [...clients].sort((a, b) => {
-      const orderA = parseInt(localStorage.getItem(`client_order_${a.id}`)) || 9999;
-      const orderB = parseInt(localStorage.getItem(`client_order_${b.id}`)) || 9999;
-      return orderA - orderB;
-    });
+    return [...clients].sort((a, b) => a.order - b.order);
   };
 
   const position = localStorage.getItem(TRAY_POSITION_KEY) || 'top-center';
@@ -62,20 +58,28 @@ export const Tray = () => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Первый расчет
+    // Получаем размеры контента
     const rect = container.getBoundingClientRect();
     
-    // Второй расчет через scroll dimensions
-    const width = Math.max(rect.width, container.scrollWidth);
-    const height = Math.max(rect.height, container.scrollHeight);
+    // Добавляем небольшой запас для предотвращения появления полос прокрутки
+    const width = Math.ceil(Math.max(rect.width, container.scrollWidth)) + (isVertical ? 10 : 0);
+    const height = Math.ceil(Math.max(rect.height, container.scrollHeight)) + 5;
 
     window.electron?.resizeWindow(width, height);
   };
 
-// Вызываем при монтировании и после изменений
+  // Вызываем при монтировании и после изменений
   useEffect(() => {
-    const timer = setTimeout(updateWindowSize, 100);
-    return () => clearTimeout(timer);
+    // Используем несколько таймаутов для более надежного обновления размеров
+    const timer1 = setTimeout(updateWindowSize, 50);
+    const timer2 = setTimeout(updateWindowSize, 150);
+    const timer3 = setTimeout(updateWindowSize, 300);
+    
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
   }, [clients, isVertical]);
 
   const toggleMute = () => {
@@ -85,8 +89,8 @@ export const Tray = () => {
   const sortedClients = getSortedClients();
   
   return (
-    <div ref={containerRef}>
-      <div className={`p-4 text-xs flex gap-8 flex-nowrap${isVertical ? " flex-col" : " flex-row"}`}>
+    <div ref={containerRef} className="overflow-hidden">
+      <div className={`p-4 pt-7 text-xs flex gap-8 flex-nowrap${isVertical ? " flex-col" : " flex-row"}`}>
           <MuteButton
             isMuted={isAllmuted}
             onClick={toggleMute}
@@ -94,12 +98,12 @@ export const Tray = () => {
         {sortedClients.length > 0 && (
           <TrayClientList list={sortedClients.map(client => ({
             id: client.id,
-            isVertical: isVertical,
             title: client.name,
             description: `ID: ${client.id}`,
             isMuted: client.isMuted,
           }))}
             onToggleClient={handleToggleClient}
+            isVertical= {isVertical}
           />
         )}
       </div>

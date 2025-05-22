@@ -9,11 +9,7 @@ export const Home = () => {
 
   // Функция для сортировки клиентов по порядковому номеру
   const getSortedClients = () => {
-    return [...clients].sort((a, b) => {
-      const orderA = parseInt(localStorage.getItem(`client_order_${a.id}`)) || 9999;
-      const orderB = parseInt(localStorage.getItem(`client_order_${b.id}`)) || 9999;
-      return orderA - orderB;
-    });
+    return [...clients].sort((a, b) => a.order - b.order);
   };
 
   useEffect(() => {

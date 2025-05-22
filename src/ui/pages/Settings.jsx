@@ -19,7 +19,7 @@ export const Settings = () => {
     localStorage.getItem(TRAY_POSITION_KEY) || TRAY_POSITIONS.BOTTOM
   );
 
-  const {clients, updateClientName } = useSocketStore();
+  const { clients, updateClientNameAndOrder } = useSocketStore();
   const [editNames, setEditNames] = useState({});
   const [editOrders, setEditOrders] = useState({});
 
@@ -48,15 +48,23 @@ export const Settings = () => {
 
   const handleApplyName = (id) => {
     const name = editNames[id];
-    if (name?.trim()) {
-      updateClientName(id, name.trim());
-    }
-    
     const order = editOrders[id];
-    if (order !== undefined) {
-      // Сохраняем порядок в localStorage
-      localStorage.setItem(`client_order_${id}`, order);
-    }
+    
+    // Используем новую функцию для обновления имени и порядка одновременно
+    updateClientNameAndOrder(id, name?.trim(), order);
+    
+    // Очищаем состояние редактирования
+    setEditNames(prev => {
+      const newState = {...prev};
+      delete newState[id];
+      return newState;
+    });
+    
+    setEditOrders(prev => {
+      const newState = {...prev};
+      delete newState[id];
+      return newState;
+    });
   };
 
   const handleTrayPositionChange = (position) => {
@@ -77,7 +85,7 @@ export const Settings = () => {
   useEffect(() => {
     const orders = {};
     clients.forEach(client => {
-      const savedOrder = localStorage.getItem(`client_order_${client.id}`);
+      const savedOrder = localStorage.getItem(`client_order`);
       if (savedOrder !== null) {
         orders[client.id] = savedOrder;
       }
@@ -160,7 +168,7 @@ export const Settings = () => {
                     className="input input-sm w-20"
                     placeholder="Порядок"
                     min="1"
-                    value={editOrders[client.id] ?? ''}
+                    value={editOrders[client.id] ?? '0'}
                     onChange={(e) => handleOrderChange(client.id, e.target.value)}
                   />
                   <button
