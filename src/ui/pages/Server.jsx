@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusIcon } from '../components/StatusIcon';
 import { Loader } from '../components/Loader';
 import { useServerStore } from '../store/serverStore';
@@ -13,13 +13,14 @@ export const Server = () => {
     toggleServer,
     checkServerStatus,
   } = useServerStore();
+  const [newPort, setNewPort] = useState(port.toString());
 
   useEffect(() => {
     checkServerStatus();
   }, [checkServerStatus]);
   
-  const setPortHandler = (e) => {
-    setPort(Number(e.target.value));
+  const setPortHandler = () => {
+    setPort(Number(newPort));
   };
 
   return (
@@ -35,9 +36,9 @@ export const Server = () => {
       <div className="text-center">
         <label className="input">
           <span className="label">PORT</span>
-          <input type="text" placeholder="5000" value={port} onChange={setPortHandler} />
+          <input type="text" placeholder="5000" value={newPort} onChange={e=>setNewPort(e.target.value)} />
         </label>
-        <button className="btn btn-soft">Применить</button>
+        <button className="btn btn-soft" onClick={setPortHandler}>Применить</button>
       </div>
       
 

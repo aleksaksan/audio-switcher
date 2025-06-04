@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen } from 'electron';
 import path from 'path';
 import { isDev } from './util.js';
 import { getPreloadPath } from './pathResolver.js';
@@ -12,11 +12,20 @@ import { fileURLToPath, pathToFileURL } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Константы для позиций трея
+const TRAY_POSITIONS = {
+  TOP_CENTER: 'top-center',
+  BOTTOM_CENTER: 'bottom-center',
+  LEFT_CENTER: 'left-center',
+  RIGHT_CENTER: 'right-center',
+};
+
 let mainWindow;
 let tray = null;
 let trayWindow = null;
 let io = null;
 let server = null;
+let trayPosition = TRAY_POSITIONS.BOTTOM_CENTER; // Позиция по умолчанию
 const clientMuteStates = {};
 let isConnected = false;
 let clientList = [];
@@ -25,7 +34,14 @@ let clientList = [];
 // App ready
 // =========================
 app.on('ready', () => {
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    args: ['--hidden']
+  });
+
+  loudness.setMuted(true);
   // Основное окно
+
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -33,9 +49,19 @@ app.on('ready', () => {
       preload: getPreloadPath(),
       contextIsolation: true,
       sandbox: true
-    }
+    },
+    show: false // Не показывать окно при запуске
   });
-
+  
+  // Проверяем, был ли запуск автоматическим
+  const wasAutoLaunched = process.argv.includes('--autostart') || 
+                          !app.commandLine.hasSwitch('hidden') || 
+                          app.getLoginItemSettings().wasOpenedAtLogin;
+  
+  // Показываем окно только если это не автозапуск
+  if (!wasAutoLaunched) {
+    mainWindow.show();
+  }
   // Иконка трея
   const iconPath = isDev()
     ? path.join(__dirname, '../build/icon.ico')
@@ -47,7 +73,22 @@ app.on('ready', () => {
 
   tray.setContextMenu(Menu.buildFromTemplate([
     {
-      label: 'Развернуть',
+      label: 'Показать виджет',
+      click: () => {
+        trayWindow.show();
+        trayWindow.focus();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Cкрыть виджет',
+      click: () => {
+        trayWindow.hide();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Показать основное окно',
       click: () => {
         mainWindow.show();
         mainWindow.focus();
@@ -68,55 +109,74 @@ app.on('ready', () => {
   });
 
   tray.on('click', (event, bounds) => {
-    if (trayWindow && trayWindow.isVisible()) {
-      trayWindow.hide();
-    } else {
-      if (!trayWindow) {
-        trayWindow = new BrowserWindow({
-          width: 300,
-          height: 600,
-          frame: false,
-          show: false,
-          skipTaskbar: true,
-          webPreferences: {
-            preload: getPreloadPath(),
-            contextIsolation: true,
-            sandbox: true
-          }
-        });
-
-        if (isDev()) {
-          trayWindow.loadURL('http://localhost:5123/#/tray');
-        } else {
-          trayWindow.loadFile(path.join(app.getAppPath(), './dist-react/index.html'), {
-            hash: '/tray'
-          });
+    if (!trayWindow) {
+      trayWindow = new BrowserWindow({
+        width: 300,
+        height: 100,
+        frame: false,
+        show: true,
+        skipTaskbar: true,
+        transparent: true,
+        alwaysOnTop: true,
+        backgroundColor: '#00000000',
+        titleBarStyle: 'hidden',
+        titleBarOverlay: false,
+        resizable: true,
+        autoHideMenuBar: true,
+        webPreferences: {
+          preload: getPreloadPath(),
+          contextIsolation: true,
+          sandbox: true
         }
+      });
+      
+      // Устанавливаем пустой заголовок
+      trayWindow.setTitle('');
+      
+      // Добавляем обработчик события, чтобы сбрасывать заголовок при его изменении
+      trayWindow.on('page-title-updated', (event) => {
+        event.preventDefault();
+        trayWindow.setTitle('');
+      });
 
-        trayWindow.on('blur', () => trayWindow.hide());
-        trayWindow.on('close', (event) => {
-          event.preventDefault();
-          trayWindow.hide();
-        });
-    
-        trayWindow.webContents.on('did-finish-load', () => {
-          trayWindow.webContents.send('client-list', clientList);
-          trayWindow.webContents.send('connection-status', isConnected);
+      if (isDev()) {
+        trayWindow.webContents.openDevTools({ mode: 'detach' });
+      }
 
+      if (isDev()) {
+        trayWindow.loadURL('http://localhost:5123/#/tray');
+      } else {
+        trayWindow.loadFile(path.join(app.getAppPath(), './dist-react/index.html'), {
+          hash: '/tray'
         });
       }
 
-      const { x, y } = bounds;
-      trayWindow.setPosition(
-        x - trayWindow.getBounds().width / 2,
-        y - trayWindow.getBounds().height
-      );
-      trayWindow.show();
+      trayWindow.on('blur', () => {
+        trayWindow.setBackgroundColor('#00000001');
+        trayWindow.setOpacity(1) 
+        trayWindow.setBackgroundColor('#00000000');
+      });
 
-      
-      // trayWindow.webContents.send('client-list', clientList);
-      // trayWindow.webContents.send('connection-status', isConnected);
+      trayWindow.on('close', (event) => {
+        event.preventDefault();
+        trayWindow.hide();
+      });
+  
+      trayWindow.webContents.on('did-finish-load', () => {
+        trayWindow.webContents.send('client-list', clientList);
+        trayWindow.webContents.send('connection-status', isConnected);
+        
+        trayWindow.setBackgroundColor('#00000000');
+        trayWindow.webContents.executeJavaScript(`
+          const { width, height } = document.body.getBoundingClientRect()
+          window.electron.resizeWindow(width, height)
+        `)
+      });
     }
+
+    // Позиционируем окно трея в соответствии с настройками
+    positionTrayWindow(bounds);
+    trayWindow.show();    
   });
 
   mainWindow.on('close', (event) => {
@@ -161,9 +221,10 @@ ipcMain.handle('start-server', (event, port) => {
 
       updateClientList();
 
-      socket.on('register-client', ({ id, name }) => {
+      socket.on('register-client', ({ id, name, order }) => {
         socket.data.id = id;
         socket.data.name = name || os.hostname();
+        socket.data.order = order || 0;
         updateClientList();
       });
 
@@ -171,6 +232,23 @@ ipcMain.handle('start-server', (event, port) => {
         const targetSocket = io.sockets.sockets.get(id);
         if (targetSocket) {
           targetSocket.data.name = name;
+          setTimeout(updateClientList, 10);
+        }
+      });
+
+      socket.on('change-client-order', ({ id, order }) => {
+        const targetSocket = io.sockets.sockets.get(id);
+        if (targetSocket) {
+          targetSocket.data.order = order;
+          setTimeout(updateClientList, 10);
+        }
+      });
+
+      socket.on('change-client-info', ({ id, name, order }) => {
+        const targetSocket = io.sockets.sockets.get(id);
+        if (targetSocket) {
+          if (name) targetSocket.data.name = name;
+          if (order !== undefined) targetSocket.data.order = order;
           setTimeout(updateClientList, 10);
         }
       });
@@ -202,7 +280,8 @@ ipcMain.handle('start-server', (event, port) => {
       socket.on('force-mute-all', () => {
         console.log('Forcing mute on all clients');
         for (const [, targetSocket] of io.sockets.sockets) {
-          targetSocket.emit('apply-mute');
+          // Изменяем команду, чтобы явно указать, что нужно выключить динамики
+          targetSocket.emit('force-mute');
         }
       });
     });
@@ -275,6 +354,7 @@ function updateClientList() {
     name: socket.data.name || os.hostname(),
     connected: socket.connected,
     isMuted: clientMuteStates[id] || false,
+    order: socket.data.order || 0 
   }));
 
   clientList = [...clients];
@@ -376,6 +456,23 @@ ipcMain.on('request-send-toggle', (event, clientId) => {
   }
 });
 
+ipcMain.on('resize-window', (event, width, height) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) {
+    // Добавляем небольшой запас для предотвращения появления полос прокрутки
+    win.setSize(Math.ceil(width), Math.ceil(height));
+    
+    // Если окно трея, обновляем его позицию
+    if (win === trayWindow) {
+      const bounds = tray.getBounds();
+      positionTrayWindow(bounds);
+    }
+  }
+  if (win) {
+    win.setSize(width, height);
+  }
+});
+
 // =========================
 // App exit
 // =========================
@@ -400,3 +497,60 @@ app.on('before-quit', () => {
     });
   }
 });
+
+
+setTimeout(() => {
+  const bounds = tray.getBounds();
+  tray.emit('click', {}, bounds);
+}, 100); // Небольшая задержка для уверенности, что приложение полностью загрузилось
+
+
+// Функция для позиционирования окна трея
+function positionTrayWindow(bounds) {
+  if (!trayWindow) return;
+  
+  const { width: trayWidth, height: trayHeight } = trayWindow.getBounds();
+  const { x, y, } = bounds;
+  // Используем импортированный electron вместо require
+  const screenBounds = screen.getPrimaryDisplay().workAreaSize;
+  
+  let posX, posY;
+  
+  switch (trayPosition) {
+    case TRAY_POSITIONS.TOP_CENTER:
+      posX = Math.round(screenBounds.width / 2 - trayWidth / 2);
+      posY = 0;
+      break;
+    case TRAY_POSITIONS.BOTTOM_CENTER:
+      posX = Math.round(screenBounds.width / 2 - trayWidth / 2);
+      posY = screenBounds.height - trayHeight;
+      break;
+    case TRAY_POSITIONS.LEFT_CENTER:
+      posX = 0;
+      posY = Math.round(screenBounds.height / 2 - trayHeight / 2);
+      break;
+    case TRAY_POSITIONS.RIGHT_CENTER:
+      posX = screenBounds.width - trayWidth;
+      posY = Math.round(screenBounds.height / 2 - trayHeight / 2);
+      break;
+    default:
+      // По умолчанию - под иконкой трея
+      posX = x - trayWidth / 2;
+      posY = y - trayHeight;
+  }
+  
+  trayWindow.setPosition(posX, posY);
+}
+
+ipcMain.on('set-tray-position', (event, position) => {
+  trayPosition = position;
+  // Если окно трея открыто, обновляем его позицию
+  if (trayWindow && trayWindow.isVisible()) {
+    positionTrayWindow(tray.getBounds());
+  }
+});
+
+ipcMain.handle('get-tray-position', () => {
+  return trayPosition;
+});
+

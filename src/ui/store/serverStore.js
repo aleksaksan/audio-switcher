@@ -1,16 +1,17 @@
 import { create } from 'zustand';
 
-export const PORT = 5000;
+export const PORT = 'port';
+export const DEFAULT_PORT = 5000;
 
 export const useServerStore = create((set, get) => ({
-  port: localStorage.getItem(PORT) || PORT,
+  port: Number(localStorage.getItem(PORT)) || DEFAULT_PORT,
   isLoading: false,
   isServerRunning: false,
   serverUrls: [],
 
   setPort: (newPort) => {
     if (!isNaN(newPort)) {
-      localStorage.setItem('port', newPort);
+      localStorage.setItem(PORT, newPort);
       set({ port: newPort });
     } else {
       console.error("PORT is not a number!");
